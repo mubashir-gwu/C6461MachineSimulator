@@ -9,33 +9,26 @@ public class Main {
         System.out.println();
 
         String[] sampleInstructions = new String[]{
-                "LDX 2,0,7",
-                "LDR 3,0,10",
-                "LDR 2,2,10",
-                "LDR 1,2,10,1",
-                "LDA 0,0,0",
-                "LDX 1,0,8",
-                "JZ 0,1,0",
+                "LOC 6 ;BEGIN AT LOCATION 6",
+                " Data 10 ;PUT 10 AT LOCATION 6",
+                " Data 3 ;PUT 3 AT LOCATION 7",
+                " Data End ;PUT 1024 AT LOCATION 8",
+                " Data 0",
+                " Data 12",
+                " Data 9",
+                " Data 18",
+                " Data 12",
+                " LDX 2,0,7 ;X2 GETS 3",
+                " LDR 3,0,10 ;R3 GETS 12",
+                " LDR 2,2,10 ;R2 GETS 12",
+                " LDR 1,2,10,I ;R1 GETS 18",
+                " LDA 0,0,0 ;R0 GETS 0 to set CONDITION CODE",
+                " LDX 1,0,8 ;X1 GETS 1024",
+                " JZ 0,1,0 ;JUMP TO End IF R0 = 0",
+                " LOC 1024",
+                "End: HLT ;STOP",
         };
 
-
-        for (String instructionString : sampleInstructions) {
-            Instruction sampleInstruction = getInstruction(instructionString);
-            try {
-                System.out.println(instructionString);
-                System.out.println(EncodeInstruction.encodePrevious(sampleInstruction));
-                System.out.println();
-            } catch (InvalidMnemonicException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private static Instruction getInstruction(String instructionString) {
-        String[] parts = instructionString.split("\\s+");
-        String mnemonic = parts[0];
-        String[] operands = parts[1].split(",");
-
-        return new Instruction("", mnemonic, operands);
+        Encoder.encode(sampleInstructions);
     }
 }
