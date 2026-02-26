@@ -27,20 +27,40 @@ public class Encoder {
         System.out.println("================================================================================");
 
         encodeLines(instructions);
+
+        prettyPrintListingFile(instructions);
+        System.out.println("================================================================================");
+        prettyPrintLoadFile(instructions);
     }
 
-    private static void encodeLines(List<Instruction> instructions) {
-        int counter = 0;
-
+    private static void prettyPrintListingFile(List<Instruction> instructions) {
         for (Instruction instruction : instructions) {
-            if (instruction.mnemonic().equals("LOC")) {
-                counter = Integer.parseInt(instruction.operands()[0]);
+            System.out.println(instruction.toListingFileString());
+        }
+    }
+
+    private static void prettyPrintLoadFile(List<Instruction> instructions) {
+        for (Instruction instruction : instructions) {
+            if (instruction.getOctal().isEmpty()) {
+                // If the instruction was a `LOC` line, it won't have an address or the octal representation.
+                // So, skip it as it will just print a blank line.
+                continue;
+            }
+
+            System.out.println(instruction.toLoadFileString());
+        }
+    }
+
+
+    private static void encodeLines(List<Instruction> instructions) {
+        for (Instruction instruction : instructions) {
+            if (instruction.getMnemonic().equals("LOC")) {
                 continue;
             }
 
             List<String> flattenedOperands = new ArrayList<>();
 
-            for (String operand : instruction.operands()) {
+            for (String operand : instruction.getOperands()) {
                 try {
                     Integer.parseInt(operand);
                     flattenedOperands.add(operand);
@@ -51,21 +71,14 @@ public class Encoder {
                 }
             }
 
-            instruction = new Instruction(instruction.label(), instruction.mnemonic(), flattenedOperands.toArray(new String[0]));
+            instruction.setOperands(flattenedOperands.toArray(new String[0]));
 
-            if (instruction.mnemonic().equalsIgnoreCase("LOC")) {
+            if (instruction.getMnemonic().equalsIgnoreCase("LOC")) {
                 continue;
             }
 
             try {
-                final String encoded = InstructionEncoder.encodeInstruction(instruction);
-
-                StringBuilder sb = new StringBuilder(Integer.toOctalString(counter++));
-                while (sb.length() < 6) {
-                    sb.insert(0, "0");
-                }
-
-                System.out.println(sb + " " + encoded);
+                instruction.setOctal(InstructionEncoder.encodeInstruction(instruction));
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
             }
@@ -76,27 +89,38 @@ public class Encoder {
         int counter = 0;
 
         for (Instruction instruction : instructions) {
-            if (instruction.mnemonic().equals("LOC")) {
-                counter = Integer.parseInt(instruction.operands()[0]);
+            if (instruction.getMnemonic().equals("LOC")) {
+                counter = Integer.parseInt(instruction.getOperands()[0]);
                 continue;
             }
 
-            if (!instruction.label().isEmpty()) {
-                labelsMap.put(instruction.label(), counter);
+            StringBuilder sb = new StringBuilder(Integer.toOctalString(counter));
+            while (sb.length() < 6) {
+                sb.insert(0, "0");
+            }
+            instruction.setLoc(sb.toString());
+
+            if (!instruction.getLabel().isEmpty()) {
+                labelsMap.put(instruction.getLabel(), counter);
             }
             counter++;
         }
     }
 
     private static List<Instruction> getTokenizedInstructions(String[] lines) {
-        // TODO: Skip blank lines.
-
         final List<Instruction> instructions = new ArrayList<>();
 
         for (String line : lines) {
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+
+            final String comment = line.contains(";") ? line.substring(line.indexOf(";") + 1).trim() : "";
+
             // Remove comment from the lines.
             line = line.contains(";") ? line.substring(0, line.indexOf(";")) : line;
             line = line.trim();
+
 
             final String[] tokens = line.split("\\s+");
             final String label;
@@ -111,7 +135,7 @@ public class Encoder {
                 opcode = tokens[0];
                 operands = tokens.length == 2 ? tokens[1].split(",") : new String[0];
             }
-            instructions.add(new Instruction(label, opcode, operands));
+            instructions.add(new Instruction(label, opcode, operands, comment, "", ""));
         }
 
         return instructions;
