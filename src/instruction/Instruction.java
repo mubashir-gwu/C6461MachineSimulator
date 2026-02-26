@@ -1,3 +1,3 @@
 package instruction;
 
-public record Instruction(String label, String mnemonic, String operands) {}
+public record Instruction(String label, String mnemonic, String[] operands) {}
