@@ -1,4 +1,8 @@
 import encoder.Encoder;
+import fileutil.FileWriter;
+import instruction.Instruction;
+
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
@@ -26,6 +30,9 @@ public class Main {
                 "End: HLT ;STOP",
         };
 
-        Encoder.encode(sampleInstructions);
+        List<Instruction> encodedInstructions = Encoder.encode(sampleInstructions);
+
+        FileWriter.writeListingFile(encodedInstructions, "sample");
+        FileWriter.writeLoadFile(encodedInstructions, "sample");
     }
 }

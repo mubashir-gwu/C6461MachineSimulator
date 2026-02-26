@@ -7,30 +7,15 @@ import java.util.*;
 public class Encoder {
     private final static Map<String, Integer> labelsMap = new HashMap<>();
 
-    public static void encode(String[] lines) {
+    public static List<Instruction> encode(String[] lines) {
         // Clear the contents from any previous encoding.
         labelsMap.clear();
 
         final List<Instruction> instructions = getTokenizedInstructions(lines);
-
-        System.out.println("Tokenized Lines:");
-        for (Instruction instruction : instructions) {
-            System.out.println(instruction);
-        }
-
-        System.out.println("================================================================================");
-
         buildLabelsMap(instructions);
-        System.out.println("Labels Map:");
-        labelsMap.forEach((key, value) -> System.out.println(key + " -> " + value));
-
-        System.out.println("================================================================================");
-
         encodeLines(instructions);
 
-        prettyPrintListingFile(instructions);
-        System.out.println("================================================================================");
-        prettyPrintLoadFile(instructions);
+        return instructions;
     }
 
     private static void prettyPrintListingFile(List<Instruction> instructions) {
