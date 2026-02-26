@@ -7,7 +7,7 @@ import java.util.*;
 public class Encoder {
     private final static Map<String, Integer> labelsMap = new HashMap<>();
 
-    public static List<Instruction> encode(String[] lines) {
+    public static List<Instruction> encode(List<String> lines) {
         // Clear the contents from any previous encoding.
         labelsMap.clear();
 
@@ -92,7 +92,7 @@ public class Encoder {
         }
     }
 
-    private static List<Instruction> getTokenizedInstructions(String[] lines) {
+    private static List<Instruction> getTokenizedInstructions(List<String> lines) {
         final List<Instruction> instructions = new ArrayList<>();
 
         for (String line : lines) {

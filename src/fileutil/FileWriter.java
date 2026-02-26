@@ -40,4 +40,8 @@ public class FileWriter {
             e.printStackTrace();
         }
     }
+
+    public static String getBaseFilename(String filename) {
+        return filename.substring(0, filename.lastIndexOf('.'));
+    }
 }

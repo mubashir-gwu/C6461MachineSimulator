@@ -1,4 +1,5 @@
 import encoder.Encoder;
+import fileutil.FileReader;
 import fileutil.FileWriter;
 import instruction.Instruction;
 
@@ -9,30 +10,14 @@ public class Main {
         System.out.println("========== C6461 Assembler ==========");
         System.out.println();
 
-        String[] sampleInstructions = new String[]{
-                "LOC 6 ;BEGIN AT LOCATION 6",
-                " Data 10 ;PUT 10 AT LOCATION 6",
-                " Data 3 ;PUT 3 AT LOCATION 7",
-                " Data End ;PUT 1024 AT LOCATION 8",
-                " Data 0",
-                " Data 12",
-                " Data 9",
-                " Data 18",
-                " Data 12",
-                " LDX 2,0,7 ;X2 GETS 3",
-                " LDR 3,0,10 ;R3 GETS 12",
-                " LDR 2,2,10 ;R2 GETS 12",
-                " LDR 1,2,10,1 ;R1 GETS 18",
-                " LDA 0,0,0 ;R0 GETS 0 to set CONDITION CODE",
-                " LDX 1,0,8 ;X1 GETS 1024",
-                " JZ 0,1,0 ;JUMP TO End IF R0 = 0",
-                " LOC 1024",
-                "End: HLT ;STOP",
-        };
+        final String filename = "test_program.asm";
+        final String programName = FileWriter.getBaseFilename(filename);
 
-        List<Instruction> encodedInstructions = Encoder.encode(sampleInstructions);
+        List<String> inputProgramLines = FileReader.readFile(filename);
 
-        FileWriter.writeListingFile(encodedInstructions, "sample");
-        FileWriter.writeLoadFile(encodedInstructions, "sample");
+        List<Instruction> encodedInstructions = Encoder.encode(inputProgramLines);
+
+        FileWriter.writeListingFile(encodedInstructions, programName);
+        FileWriter.writeLoadFile(encodedInstructions, programName);
     }
 }
