@@ -11,29 +11,36 @@ public class Encoder {
         // Clear the contents from any previous encoding.
         labelsMap.clear();
 
-        final List<TokenizedLine> tokenizedLines = getTokenizedLines(lines);
+        final List<Instruction> instructions = getTokenizedInstructions(lines);
 
         System.out.println("Tokenized Lines:");
-        for (TokenizedLine tokenizedLine : tokenizedLines) {
-            System.out.println(tokenizedLine);
+        for (Instruction instruction : instructions) {
+            System.out.println(instruction);
         }
 
         System.out.println("================================================================================");
 
-        buildLabelsMap(tokenizedLines);
+        buildLabelsMap(instructions);
         System.out.println("Labels Map:");
         labelsMap.forEach((key, value) -> System.out.println(key + " -> " + value));
 
         System.out.println("================================================================================");
 
-        encodeLines(tokenizedLines);
+        encodeLines(instructions);
     }
 
-    private static void encodeLines(List<TokenizedLine> tokenizedLines) {
-        for (TokenizedLine tokenizedLine : tokenizedLines) {
+    private static void encodeLines(List<Instruction> instructions) {
+        int counter = 0;
+
+        for (Instruction instruction : instructions) {
+            if (instruction.mnemonic().equals("LOC")) {
+                counter = Integer.parseInt(instruction.operands()[0]);
+                continue;
+            }
+
             List<String> flattenedOperands = new ArrayList<>();
 
-            for (String operand : tokenizedLine.operands()) {
+            for (String operand : instruction.operands()) {
                 try {
                     Integer.parseInt(operand);
                     flattenedOperands.add(operand);
@@ -44,7 +51,7 @@ public class Encoder {
                 }
             }
 
-            Instruction instruction = new Instruction(tokenizedLine.label(), tokenizedLine.opcode(), flattenedOperands.toArray(new String[0]));
+            instruction = new Instruction(instruction.label(), instruction.mnemonic(), flattenedOperands.toArray(new String[0]));
 
             if (instruction.mnemonic().equalsIgnoreCase("LOC")) {
                 continue;
@@ -52,33 +59,39 @@ public class Encoder {
 
             try {
                 final String encoded = InstructionEncoder.encodeInstruction(instruction);
-                System.out.println(encoded);
+
+                StringBuilder sb = new StringBuilder(Integer.toOctalString(counter++));
+                while (sb.length() < 6) {
+                    sb.insert(0, "0");
+                }
+
+                System.out.println(sb + " " + encoded);
             } catch (Exception e) {
                 System.out.println("Error: " + e.getMessage());
             }
         }
     }
 
-    private static void buildLabelsMap(List<TokenizedLine> tokenizedLines) {
+    private static void buildLabelsMap(List<Instruction> instructions) {
         int counter = 0;
 
-        for (TokenizedLine tokenizedLine : tokenizedLines) {
-            if (tokenizedLine.opcode().equals("LOC")) {
-                counter = Integer.parseInt(tokenizedLine.operands()[0]);
+        for (Instruction instruction : instructions) {
+            if (instruction.mnemonic().equals("LOC")) {
+                counter = Integer.parseInt(instruction.operands()[0]);
                 continue;
             }
 
-            if (!tokenizedLine.label().isEmpty()) {
-                labelsMap.put(tokenizedLine.label(), counter);
+            if (!instruction.label().isEmpty()) {
+                labelsMap.put(instruction.label(), counter);
             }
             counter++;
         }
     }
 
-    private static List<TokenizedLine> getTokenizedLines(String[] lines) {
+    private static List<Instruction> getTokenizedInstructions(String[] lines) {
         // TODO: Skip blank lines.
 
-        final List<TokenizedLine> tokenizedLines = new ArrayList<>();
+        final List<Instruction> instructions = new ArrayList<>();
 
         for (String line : lines) {
             // Remove comment from the lines.
@@ -98,9 +111,9 @@ public class Encoder {
                 opcode = tokens[0];
                 operands = tokens.length == 2 ? tokens[1].split(",") : new String[0];
             }
-            tokenizedLines.add(new TokenizedLine(label, opcode, operands));
+            instructions.add(new Instruction(label, opcode, operands));
         }
 
-        return tokenizedLines;
+        return instructions;
     }
 }
