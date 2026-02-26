@@ -1,7 +1,4 @@
-import encoder.EncodeInstruction;
 import encoder.Encoder;
-import instruction.Instruction;
-import opcode.InvalidMnemonicException;
 
 public class Main {
     public static void main(String[] args) {
@@ -21,7 +18,7 @@ public class Main {
                 " LDX 2,0,7 ;X2 GETS 3",
                 " LDR 3,0,10 ;R3 GETS 12",
                 " LDR 2,2,10 ;R2 GETS 12",
-                " LDR 1,2,10,I ;R1 GETS 18",
+                " LDR 1,2,10,1 ;R1 GETS 18",
                 " LDA 0,0,0 ;R0 GETS 0 to set CONDITION CODE",
                 " LDX 1,0,8 ;X1 GETS 1024",
                 " JZ 0,1,0 ;JUMP TO End IF R0 = 0",

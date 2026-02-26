@@ -1,5 +1,7 @@
 package encoder;
 
+import instruction.Instruction;
+
 import java.util.*;
 
 public class Encoder {
@@ -21,6 +23,40 @@ public class Encoder {
         buildLabelsMap(tokenizedLines);
         System.out.println("Labels Map:");
         labelsMap.forEach((key, value) -> System.out.println(key + " -> " + value));
+
+        System.out.println("================================================================================");
+
+        encodeLines(tokenizedLines);
+    }
+
+    private static void encodeLines(List<TokenizedLine> tokenizedLines) {
+        for (TokenizedLine tokenizedLine : tokenizedLines) {
+            List<String> flattenedOperands = new ArrayList<>();
+
+            for (String operand : tokenizedLine.operands()) {
+                try {
+                    Integer.parseInt(operand);
+                    flattenedOperands.add(operand);
+                } catch (NumberFormatException e) {
+                    if (labelsMap.containsKey(operand)) {
+                        flattenedOperands.add(String.valueOf(labelsMap.get(operand)));
+                    }
+                }
+            }
+
+            Instruction instruction = new Instruction(tokenizedLine.label(), tokenizedLine.opcode(), flattenedOperands.toArray(new String[0]));
+
+            if (instruction.mnemonic().equalsIgnoreCase("LOC")) {
+                continue;
+            }
+
+            try {
+                final String encoded = InstructionEncoder.encodeInstruction(instruction);
+                System.out.println(encoded);
+            } catch (Exception e) {
+                System.out.println("Error: " + e.getMessage());
+            }
+        }
     }
 
     private static void buildLabelsMap(List<TokenizedLine> tokenizedLines) {

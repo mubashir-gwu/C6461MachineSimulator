@@ -7,8 +7,17 @@ import opcode.OpcodeLookupTable;
 import static encoder.EncoderStringUtil.getOctalString;
 import static encoder.EncoderStringUtil.getZeroPaddedBinaryString;
 
-public class EncodeInstruction {
-    public static String encodePrevious(Instruction instruction) throws InvalidMnemonicException {
+public class InstructionEncoder {
+    public static String encodeInstruction(Instruction instruction) throws InvalidMnemonicException {
+        if (instruction.mnemonic().equalsIgnoreCase("DATA")) {
+            StringBuilder sb = new StringBuilder(Integer.toOctalString(Integer.parseInt(instruction.operands()[0])));
+            while (sb.length() < 6) {
+                sb.insert(0, "0");
+            }
+
+            return sb.toString();
+        }
+
         String binaryString = switch (OpcodeLookupTable.getOpcodeType(instruction.mnemonic())) {
             case LOAD_STORE, TRANSFER, ARITHMETIC -> encodeWithLoadStoreFormat(instruction);
             case MULTIPLY_DIVIDE, LOGICAL -> encodeWithRegisterRegisterFormat(instruction);
