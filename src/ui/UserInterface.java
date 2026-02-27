@@ -1,6 +1,7 @@
 package ui;
 
 import encoder.EncoderStringUtil;
+import memory.Memory;
 import memory.Register;
 import memory.RegisterManager;
 import outputmanager.OutputManager;
@@ -9,11 +10,15 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UserInterface extends JFrame {
     private static OutputManager outputManager;
+    private static Memory memory;
     private static JTextField binaryOutputTextField;
     private static String octalInputValue;
+    private static Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
 
     private static void loadOctalValueIntoRegister(Register register, String octalValue) {
         RegisterManager.loadRegister(register, Integer.parseInt(octalValue, 8));
@@ -38,6 +43,8 @@ public class UserInterface extends JFrame {
         panels.add(getCenterPanel());
         panels.add(getRightPanel());
         root.add(panels, BorderLayout.CENTER);
+
+        memory = new Memory();
 
         setContentPane(root);
     }
@@ -88,66 +95,64 @@ public class UserInterface extends JFrame {
 
         JButton loadButton = new JButton("Load");
         loadButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
+
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton loadPlusButton = new JButton("Load+");
         loadPlusButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
+
+            // Increment the MAR register by 1.
+            registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
+
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton storeButton = new JButton("Store");
         storeButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
+            final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
+
+            memory.setMemoryAt(marValue, mbrValue);
+
+            outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton storePlusButton = new JButton("Store+");
         storePlusButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
+            final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
+
+            memory.setMemoryAt(marValue, mbrValue);
+
+            // Increment the MAR register by 1.
+            registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
+
+            outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton runButton = new JButton("Run");
         runButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            System.out.println("TODO");
         });
 
         JButton stepButton = new JButton("Step");
         stepButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            System.out.println("TODO");
         });
 
         JButton haltButton = new JButton("Halt");
         haltButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            System.out.println("TODO");
         });
 
         JButton iplButton = new JButton("IPL");
         iplButton.addActionListener(e -> {
-            try {
-                System.out.println("hi");
-            } catch (NumberFormatException ex) {
-            }
+            System.out.println("TODO");
         });
         iplButton.setBackground(Color.RED);
         iplButton.setForeground(Color.WHITE);
@@ -310,6 +315,8 @@ public class UserInterface extends JFrame {
         textField.setEditable(false);
         textField.setFocusable(false);
         textField.setBackground(Color.LIGHT_GRAY);
+
+        registerTextFieldMap.put(register, textField);
 
         mainPanel.add(label, BorderLayout.WEST);
         mainPanel.add(textField, BorderLayout.CENTER);
