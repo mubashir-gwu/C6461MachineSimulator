@@ -14,13 +14,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserInterface extends JFrame {
-    private static OutputManager outputManager;
-    private static Memory memory;
-    private static JTextField binaryOutputTextField;
-    private static String octalInputValue;
-    private static Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
+    private OutputManager outputManager;
+    private final Memory memory;
+    private JTextField binaryOutputTextField;
+    private String octalInputValue;
+    private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
 
-    private static void loadOctalValueIntoRegister(Register register, String octalValue) {
+    private void loadOctalValueIntoRegister(Register register, String octalValue) {
         RegisterManager.loadRegister(register, Integer.parseInt(octalValue, 8));
     }
 
@@ -302,11 +302,11 @@ public class UserInterface extends JFrame {
         return mainPanel;
     }
 
-    private static JPanel getLabelledTextField(Register register) {
+    private JPanel getLabelledTextField(Register register) {
         return getLabelledTextField(register, true);
     }
 
-    private static JPanel getLabelledTextField(Register register, boolean withButton) {
+    private JPanel getLabelledTextField(Register register, boolean withButton) {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         JLabel label = new JLabel(String.valueOf(register));
