@@ -1,16 +1,14 @@
 package ui;
 
 import encoder.EncoderStringUtil;
-import outputmanager.OutputManager;
-import memory.RegisterManager;
 import memory.Register;
+import memory.RegisterManager;
+import outputmanager.OutputManager;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.util.HashMap;
-import java.util.Map;
 
 public class UserInterface extends JFrame {
     private static OutputManager outputManager;
@@ -73,8 +71,104 @@ public class UserInterface extends JFrame {
         ));
 
         centerPanel.add(getSpecialRegistersPanel());
+        centerPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
+        centerPanel.add(getButtonsPanel());
 
         return centerPanel;
+    }
+
+    private JPanel getButtonsPanel() {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Load/Store/Run"),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+
+        JButton loadButton = new JButton("Load");
+        loadButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton loadPlusButton = new JButton("Load+");
+        loadPlusButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton storeButton = new JButton("Store");
+        storeButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton storePlusButton = new JButton("Store+");
+        storePlusButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton runButton = new JButton("Run");
+        runButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton stepButton = new JButton("Step");
+        stepButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton haltButton = new JButton("Halt");
+        haltButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+
+        JButton iplButton = new JButton("IPL");
+        iplButton.addActionListener(e -> {
+            try {
+                System.out.println("hi");
+            } catch (NumberFormatException ex) {
+            }
+        });
+        iplButton.setBackground(Color.RED);
+        iplButton.setForeground(Color.WHITE);
+
+        JPanel buttonsPanel = new JPanel(new GridLayout(4, 2, 20, 5));
+        buttonsPanel.add(loadButton);
+        buttonsPanel.add(runButton);
+
+        buttonsPanel.add(loadPlusButton);
+        buttonsPanel.add(stepButton);
+
+        buttonsPanel.add(storeButton);
+        buttonsPanel.add(haltButton);
+
+        buttonsPanel.add(storePlusButton);
+        buttonsPanel.add(iplButton);
+
+        mainPanel.add(buttonsPanel);
+        mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
+
+        return mainPanel;
     }
 
     private JPanel getRightPanel() {
@@ -120,13 +214,19 @@ public class UserInterface extends JFrame {
 
         textField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
-            public void insertUpdate(DocumentEvent e) {update();}
+            public void insertUpdate(DocumentEvent e) {
+                update();
+            }
 
             @Override
-            public void removeUpdate(DocumentEvent e) {update();}
+            public void removeUpdate(DocumentEvent e) {
+                update();
+            }
 
             @Override
-            public void changedUpdate(DocumentEvent e) {update();}
+            public void changedUpdate(DocumentEvent e) {
+                update();
+            }
 
             void update() {
                 octalInputValue = textField.getText();
