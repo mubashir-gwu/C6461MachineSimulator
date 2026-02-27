@@ -53,9 +53,10 @@ public class UserInterface extends JFrame {
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
         leftPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Left Panel"),
+                BorderFactory.createTitledBorder(""),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
+        leftPanel.setBackground(Color.getHSBColor(0.2f, 0.1f, 0.9f));
 
         leftPanel.add(getGprPanel());
         leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
@@ -64,7 +65,7 @@ public class UserInterface extends JFrame {
         leftPanel.add(getOctalInputPanel());
         leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
         leftPanel.add(getBinaryOutputPanel());
-        leftPanel.add(Box.createVerticalGlue());                  // Fill the remaining space with blank space.
+        leftPanel.add(Box.createVerticalGlue());                  // Fill the remaining space with some blank space.
 
         return leftPanel;
     }
@@ -73,9 +74,10 @@ public class UserInterface extends JFrame {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Center Panel"),
+                BorderFactory.createTitledBorder(""),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
+        centerPanel.setBackground(Color.getHSBColor(0.5f, 0.1f, 0.9f));
 
         centerPanel.add(getSpecialRegistersPanel());
         centerPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
@@ -180,9 +182,10 @@ public class UserInterface extends JFrame {
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Right Panel"),
+                BorderFactory.createTitledBorder(""),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
+        rightPanel.setBackground(Color.getHSBColor(0.8f, 0.1f, 0.9f));
 
         JPanel outputPanel = new JPanel();
         outputPanel.setLayout(new BoxLayout(outputPanel, BoxLayout.Y_AXIS));
