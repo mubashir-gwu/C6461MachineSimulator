@@ -13,14 +13,14 @@ public class EncoderStringUtil {
     }
 
     public static String getZeroPaddedBinaryString(String value, int length) {
-        String binaryString = Integer.toBinaryString(Integer.parseInt(value));
-        StringBuilder sb = new StringBuilder(binaryString);
-
-        while (sb.length() < length) {
-            sb.insert(0, "0");
+        int intValue;
+        try  {
+                intValue = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return "";
         }
 
-        return sb.toString();
+        return getZeroPaddedBinaryString(intValue, length);
     }
 
     public static String getOctalString(String binaryString) {

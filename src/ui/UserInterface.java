@@ -1,10 +1,26 @@
 package ui;
 
+import encoder.EncoderStringUtil;
+import outputmanager.OutputManager;
+import memory.RegisterManager;
+import memory.Register;
+
 import javax.swing.*;
-import javax.swing.border.Border;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class UserInterface extends JFrame {
+    private static OutputManager outputManager;
+    private static JTextField binaryOutputTextField;
+    private static String octalInputValue;
+
+    private static void loadOctalValueIntoRegister(Register register, String octalValue) {
+        RegisterManager.loadRegister(register, Integer.parseInt(octalValue, 8));
+    }
+
     public UserInterface() {
         setTitle("C6461 Assembler");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);     // Exit the application when the window is closed.
@@ -39,6 +55,10 @@ public class UserInterface extends JFrame {
         leftPanel.add(getGprPanel());
         leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
         leftPanel.add(getIxrPanel());
+        leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
+        leftPanel.add(getOctalInputPanel());
+        leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
+        leftPanel.add(getBinaryOutputPanel());
         leftPanel.add(Box.createVerticalGlue());                  // Fill the remaining space with blank space.
 
         return leftPanel;
@@ -65,36 +85,78 @@ public class UserInterface extends JFrame {
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
-
-        JPanel cacheContentPanel = new JPanel();
-        cacheContentPanel.setLayout(new BoxLayout(cacheContentPanel, BoxLayout.Y_AXIS));
-        cacheContentPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Cache Content"),
+        JPanel outputPanel = new JPanel();
+        outputPanel.setLayout(new BoxLayout(outputPanel, BoxLayout.Y_AXIS));
+        outputPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Output"),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
-        JTextArea cacheContentTextArea = new JTextArea(5, 20);
-        cacheContentTextArea.setEditable(false);
-        cacheContentTextArea.setLineWrap(true);
-        cacheContentTextArea.setWrapStyleWord(true);
-        cacheContentPanel.add(cacheContentTextArea);
 
-        JPanel printerPanel = new JPanel();
-        printerPanel.setLayout(new BoxLayout(printerPanel, BoxLayout.Y_AXIS));
-        printerPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Printer"),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)
-        ));
-        JTextArea printerTextArea = new JTextArea(5, 20);
-        printerTextArea.setEditable(false);
-        printerTextArea.setLineWrap(true);
-        printerTextArea.setWrapStyleWord(true);
-        printerPanel.add(printerTextArea);
+        JTextArea outputTextArea = new JTextArea(5, 20);
+        outputTextArea.setEditable(false);
+        outputTextArea.setLineWrap(true);
+        outputTextArea.setWrapStyleWord(true);
+        outputPanel.add(outputTextArea);
 
-        rightPanel.add(cacheContentPanel);
-        rightPanel.add(Box.createVerticalStrut(10));
-        rightPanel.add(printerPanel);
+        // Initialize the ErrorManager with the `outputTextArea` so that it can write the errors to it.
+        outputManager = new OutputManager(outputTextArea);
+
+        rightPanel.add(outputPanel);
 
         return rightPanel;
+    }
+
+    private JPanel getOctalInputPanel() {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Octal Input"),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        JTextField textField = new JTextField(10);
+        mainPanel.add(textField, BorderLayout.CENTER);
+        mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
+
+        textField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent e) {update();}
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {update();}
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {update();}
+
+            void update() {
+                octalInputValue = textField.getText();
+                binaryOutputTextField.setText(EncoderStringUtil.getZeroPaddedBinaryString(textField.getText(), 16));
+            }
+        });
+
+
+        return mainPanel;
+    }
+
+    private JPanel getBinaryOutputPanel() {
+        JPanel mainPanel = new JPanel();
+        mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
+        mainPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Binary equivalent"),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+
+        JTextField textField = new JTextField(10);
+        textField.setEditable(false);
+        textField.setFocusable(false);
+        textField.setBackground(Color.LIGHT_GRAY);
+        mainPanel.add(textField, BorderLayout.CENTER);
+        mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
+
+
+        binaryOutputTextField = textField;
+
+        return mainPanel;
     }
 
     private JPanel getGprPanel() {
@@ -102,10 +164,10 @@ public class UserInterface extends JFrame {
         gprPanel.setLayout(new BoxLayout(gprPanel, BoxLayout.Y_AXIS));
         gprPanel.setBorder(BorderFactory.createTitledBorder("General Purpose Registers"));
 
-        gprPanel.add(getLabelledTextField("R0"));
-        gprPanel.add(getLabelledTextField("R1"));
-        gprPanel.add(getLabelledTextField("R2"));
-        gprPanel.add(getLabelledTextField("R3"));
+        gprPanel.add(getLabelledTextField(Register.GPR0));
+        gprPanel.add(getLabelledTextField(Register.GPR1));
+        gprPanel.add(getLabelledTextField(Register.GPR2));
+        gprPanel.add(getLabelledTextField(Register.GPR3));
 
         return gprPanel;
     }
@@ -115,9 +177,9 @@ public class UserInterface extends JFrame {
         ixrPanel.setLayout(new BoxLayout(ixrPanel, BoxLayout.Y_AXIS));
         ixrPanel.setBorder(BorderFactory.createTitledBorder("Index Registers"));
 
-        ixrPanel.add(getLabelledTextField("IX1"));
-        ixrPanel.add(getLabelledTextField("IX2"));
-        ixrPanel.add(getLabelledTextField("IX3"));
+        ixrPanel.add(getLabelledTextField(Register.IX1));
+        ixrPanel.add(getLabelledTextField(Register.IX2));
+        ixrPanel.add(getLabelledTextField(Register.IX3));
 
         return ixrPanel;
     }
@@ -127,30 +189,46 @@ public class UserInterface extends JFrame {
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
         mainPanel.setBorder(BorderFactory.createTitledBorder("Special Registers/Counters"));
 
-        mainPanel.add(getLabelledTextField("PC"));
-        mainPanel.add(getLabelledTextField("MAR"));
-        mainPanel.add(getLabelledTextField("MBR"));
-        mainPanel.add(getLabelledTextField("IR", false));
+        mainPanel.add(getLabelledTextField(Register.PC));
+        mainPanel.add(getLabelledTextField(Register.MAR));
+        mainPanel.add(getLabelledTextField(Register.MBR));
+        mainPanel.add(getLabelledTextField(Register.IR, false));
 
         return mainPanel;
     }
 
-    private static JPanel getLabelledTextField(String labelTex) {
-        return getLabelledTextField(labelTex, true);
+    private static JPanel getLabelledTextField(Register register) {
+        return getLabelledTextField(register, true);
     }
 
-    private static JPanel getLabelledTextField(String labelText, boolean withButton) {
+    private static JPanel getLabelledTextField(Register register, boolean withButton) {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        JLabel label = new JLabel(labelText);
+        JLabel label = new JLabel(String.valueOf(register));
+
         JTextField textField = new JTextField(10);
+        textField.setEditable(false);
+        textField.setFocusable(false);
+        textField.setBackground(Color.LIGHT_GRAY);
 
         mainPanel.add(label, BorderLayout.WEST);
         mainPanel.add(textField, BorderLayout.CENTER);
 
         if (withButton) {
-            JButton button = new JButton();
+            JButton button = new JButton("Load");
             mainPanel.add(button, BorderLayout.EAST);
+
+            button.addActionListener(e -> {
+                try {
+                    final int octalValue = Integer.parseInt(octalInputValue, 8);
+                    loadOctalValueIntoRegister(register, octalInputValue);
+                    outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(octalValue) + " into register " + register);
+
+                    textField.setText(OutputManager.getPaddedOctalValue(octalValue));
+                } catch (NumberFormatException ex) {
+                    outputManager.writeError("Invalid octal value: " + octalInputValue);
+                }
+            });
         }
 
         mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
