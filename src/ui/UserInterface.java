@@ -17,8 +17,11 @@ public class UserInterface extends JFrame {
     private OutputManager outputManager;
     private final Memory memory;
     private JTextField binaryOutputTextField;
-    private String octalInputValue;
+    private String octalInputValue = "";
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
+
+    private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
+    private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
 
     private void loadOctalValueIntoRegister(Register register, String octalValue) {
         RegisterManager.loadRegister(register, Integer.parseInt(octalValue, 8));
@@ -97,28 +100,48 @@ public class UserInterface extends JFrame {
 
         JButton loadButton = new JButton("Load");
         loadButton.addActionListener(e -> {
-            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
+            final String marText = registerTextFieldMap.get(Register.MAR).getText();
+            if (marText.isBlank()) {
+                outputManager.writeError("MAR is not set. Please set MAR first.");
+                return;
+            }
 
+            final int marValue = Integer.parseInt(marText, 8);
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
             outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton loadPlusButton = new JButton("Load+");
         loadPlusButton.addActionListener(e -> {
-            final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
+            final String marText = registerTextFieldMap.get(Register.MAR).getText();
+            if (marText.isBlank()) {
+                outputManager.writeError("MAR is not set. Please set MAR first.");
+                return;
+            }
+
+            final int marValue = Integer.parseInt(marText, 8);
             registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1.
             registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
-
-            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton storeButton = new JButton("Store");
         storeButton.addActionListener(e -> {
+            final String marText = registerTextFieldMap.get(Register.MAR).getText();
+            final String mbrText = registerTextFieldMap.get(Register.MBR).getText();
+
+            if (marText.isBlank()) {
+                outputManager.writeError("MAR is not set. Please set MAR first.");
+                return;
+            } else if (mbrText.isBlank()) {
+                outputManager.writeError("MBR is not set. Please set MBR first.");
+                return;
+            }
+
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-
             memory.setMemoryAt(marValue, mbrValue);
 
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
@@ -126,15 +149,25 @@ public class UserInterface extends JFrame {
 
         JButton storePlusButton = new JButton("Store+");
         storePlusButton.addActionListener(e -> {
+            final String marText = registerTextFieldMap.get(Register.MAR).getText();
+            final String mbrText = registerTextFieldMap.get(Register.MBR).getText();
+
+            if (marText.isBlank()) {
+                outputManager.writeError("MAR is not set. Please set MAR first.");
+                return;
+            } else if (mbrText.isBlank()) {
+                outputManager.writeError("MBR is not set. Please set MBR first.");
+                return;
+            }
+
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-
             memory.setMemoryAt(marValue, mbrValue);
+
+            outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1.
             registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
-
-            outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton runButton = new JButton("Run");
@@ -190,7 +223,7 @@ public class UserInterface extends JFrame {
         JPanel outputPanel = new JPanel();
         outputPanel.setLayout(new BoxLayout(outputPanel, BoxLayout.Y_AXIS));
         outputPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createTitledBorder("Output"),
+                BorderFactory.createTitledBorder("Messages/Errors"),
                 BorderFactory.createEmptyBorder(10, 10, 10, 10)
         ));
 
@@ -217,6 +250,7 @@ public class UserInterface extends JFrame {
         ));
 
         JTextField textField = new JTextField(10);
+        textField.setFont(monospaceFont);
         mainPanel.add(textField, BorderLayout.CENTER);
         mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
 
@@ -258,6 +292,7 @@ public class UserInterface extends JFrame {
         textField.setEditable(false);
         textField.setFocusable(false);
         textField.setBackground(Color.LIGHT_GRAY);
+        textField.setFont(monospaceBoldFont);
         mainPanel.add(textField, BorderLayout.CENTER);
         mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
 
@@ -312,12 +347,15 @@ public class UserInterface extends JFrame {
     private JPanel getLabelledTextField(Register register, boolean withButton) {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        JLabel label = new JLabel(String.valueOf(register));
+
+        JLabel label = new JLabel(String.format("%-4s", register));
+        label.setFont(monospaceBoldFont);
 
         JTextField textField = new JTextField(10);
         textField.setEditable(false);
         textField.setFocusable(false);
         textField.setBackground(Color.LIGHT_GRAY);
+        textField.setFont(monospaceFont);
 
         registerTextFieldMap.put(register, textField);
 
@@ -329,6 +367,10 @@ public class UserInterface extends JFrame {
             mainPanel.add(button, BorderLayout.EAST);
 
             button.addActionListener(e -> {
+                if (octalInputValue.isBlank()) {
+                    outputManager.writeError("Please enter a value to load into " + register);
+                    return;
+                }
                 try {
                     final int octalValue = Integer.parseInt(octalInputValue, 8);
                     loadOctalValueIntoRegister(register, octalInputValue);

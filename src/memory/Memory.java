@@ -4,7 +4,7 @@ import java.util.Arrays;
 
 public class Memory {
     private final static int MAX_MEMORY_WORDS = 2048;
-    private int[] memory;
+    private final int[] memory;
 
     public Memory() {
         memory = new int[MAX_MEMORY_WORDS];
