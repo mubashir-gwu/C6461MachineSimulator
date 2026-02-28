@@ -19,24 +19,73 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * The main graphical console for the C6461 Machine Simulator.
+ *
+ * <p>The UI is divided into three columns:
+ * <ul>
+ *   <li><b>Left panel</b> – General Purpose Registers (GPR0–GPR3), Index Registers (IX1–IX3),
+ *       and an octal input field with a live binary display for inspecting instruction words.</li>
+ *   <li><b>Center panel</b> – Special registers (PC, MAR, MBR, IR) and the main control
+ *       buttons (Load, Load+, Store, Store+, Run, Step, Halt, IPL).</li>
+ *   <li><b>Right panel</b> – A scrollable messages/errors output area.</li>
+ * </ul>
+ *
+ * <p>All register display fields show values in zero-padded 6-digit octal. Each register
+ * row (except IR) has a "Load" button that writes the current octal input value into that
+ * register. The IPL button assembles the selected source file, writes the load file, resets
+ * the CPU state, loads the program into memory, and initialises the PC.
+ */
 public class UserInterface extends JFrame {
+    /** Writes simulator messages and errors to the output text area in the right panel. */
     private OutputManager outputManager;
+
+    /** Displays the 16-bit binary equivalent of the value typed in the Octal Input field. */
     private JTextField binaryOutputTextField;
+
+    /** The current string value typed in the Octal Input field, used when loading into registers. */
     private String octalInputValue = "";
+
+    /** Maps each register to its corresponding read-only display text field in the UI. */
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
+
+    /** Path to the assembly source file selected via the Browse button. */
     private Path programFilePath;
+
+    /** The simulated CPU instance; recreated on each IPL to reset state. */
     private CPU cpu;
+
+    /** Run button reference kept as a field so it can be enabled/disabled after halt. */
     private JButton runButton;
+
+    /** Step button reference kept as a field so it can be enabled/disabled after halt. */
     private JButton stepButton;
+
+    /** Halt button reference kept as a field so it can be enabled/disabled after halt. */
     private JButton haltButton;
 
+    /** Monospace font used for register value display fields. */
     private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
+
+    /** Bold monospace font used for register label and binary output display fields. */
     private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
 
+    /**
+     * Parses an octal string and stores the resulting integer value into the specified register.
+     *
+     * @param register   the register to load
+     * @param octalValue the octal string representation of the value to load
+     */
     private void loadOctalValueIntoRegister(Register register, String octalValue) {
         cpu.getRegisterManager().loadRegister(register, Integer.parseInt(octalValue, 8));
     }
 
+    /**
+     * Constructs and lays out the simulator UI window.
+     *
+     * <p>Initialises the CPU, builds all sub-panels, and assembles the root layout.
+     * The window is centred on screen and sized to 1000x700 pixels.
+     */
     public UserInterface() {
         cpu = new CPU();
 
@@ -68,6 +117,14 @@ public class UserInterface extends JFrame {
         setContentPane(root);
     }
 
+    /**
+     * Builds the file-picker bar at the top of the window.
+     *
+     * <p>Contains a label, a read-only path text field, and a Browse button that opens a
+     * file chooser starting in the current working directory.
+     *
+     * @return the constructed file-picker panel
+     */
     private JPanel getFilePickerPanel() {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -104,6 +161,11 @@ public class UserInterface extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * Builds the left panel containing the GPR display, IXR display, octal input, and binary output.
+     *
+     * @return the constructed left panel
+     */
     private JPanel getLeftPanel() {
         JPanel leftPanel = new JPanel();
         leftPanel.setLayout(new BoxLayout(leftPanel, BoxLayout.Y_AXIS));
@@ -120,11 +182,16 @@ public class UserInterface extends JFrame {
         leftPanel.add(getOctalInputPanel());
         leftPanel.add(Box.createVerticalStrut(10));         // Add a gap of 10 between the panels.
         leftPanel.add(getBinaryOutputPanel());
-        leftPanel.add(Box.createVerticalGlue());                  // Fill the remaining space with some blank space.
+        leftPanel.add(Box.createVerticalGlue());            // Fill the remaining space with some blank space.
 
         return leftPanel;
     }
 
+    /**
+     * Builds the center panel containing the special registers and control buttons.
+     *
+     * @return the constructed center panel
+     */
     private JPanel getCenterPanel() {
         JPanel centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
@@ -141,6 +208,12 @@ public class UserInterface extends JFrame {
         return centerPanel;
     }
 
+    /**
+     * Refreshes all register display fields and button states to match the current CPU state.
+     *
+     * <p>Called after every instruction execution, IPL, or manual register load to keep
+     * the UI consistent with the CPU's internal register values.
+     */
     private void syncUIWithCPU() {
         for (Register register : Register.values()) {
             registerTextFieldMap.get(register).setText(OutputManager.getPaddedOctalValue(cpu.getRegisterManager().getRegisterValue(register)));
@@ -151,6 +224,23 @@ public class UserInterface extends JFrame {
         haltButton.setEnabled(!cpu.isHalted());
     }
 
+    /**
+     * Builds the panel containing the Load, Load+, Store, Store+, Run, Step, Halt, and IPL buttons.
+     *
+     * <p>Button behaviour:
+     * <ul>
+     *   <li><b>Load</b>    – reads the word at the address in MAR and stores it in MBR.</li>
+     *   <li><b>Load+</b>   – same as Load, then increments MAR by 1.</li>
+     *   <li><b>Store</b>   – writes the value in MBR to the address in MAR.</li>
+     *   <li><b>Store+</b>  – same as Store, then increments MAR by 1.</li>
+     *   <li><b>Run</b>     – executes all instructions until HLT or Halt.</li>
+     *   <li><b>Step</b>    – executes a single instruction and updates the display.</li>
+     *   <li><b>Halt</b>    – manually sets the CPU halted flag.</li>
+     *   <li><b>IPL</b>     – assembles the selected file, resets the CPU, and loads the program.</li>
+     * </ul>
+     *
+     * @return the constructed buttons panel
+     */
     private JPanel getButtonsPanel() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -318,6 +408,7 @@ public class UserInterface extends JFrame {
                 return;
             }
 
+            // Assemble the source file and write the listing and load output files.
             List<Instruction> instructions = Encoder.encode(programLines);
 
             final String programName = FileWriter.getBaseFilename(programFilePath);
@@ -325,7 +416,7 @@ public class UserInterface extends JFrame {
             FileWriter.writeListingFile(instructions, programName);
             Path loadFilePath = FileWriter.writeLoadFile(instructions, programName);
 
-            // Reset the state for each IPL.
+            // Reset the state for each IPL so previous runs do not affect the new program.
             this.cpu = new CPU();
             cpu.setOutputManager(outputManager);
 
@@ -360,6 +451,14 @@ public class UserInterface extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * Builds the right panel containing the messages/errors output text area.
+     *
+     * <p>Also initialises the {@link OutputManager} instance (which requires the text area
+     * to already be constructed) and connects it to the CPU.
+     *
+     * @return the constructed right panel
+     */
     private JPanel getRightPanel() {
         JPanel rightPanel = new JPanel();
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
@@ -382,7 +481,7 @@ public class UserInterface extends JFrame {
         outputTextArea.setWrapStyleWord(true);
         outputPanel.add(outputTextArea);
 
-        // Initialize the ErrorManager with the `outputTextArea` so that it can write the errors to it.
+        // Initialize the OutputManager with the `outputTextArea` so that it can write messages to it.
         outputManager = new OutputManager(outputTextArea);
         cpu.setOutputManager(outputManager);
 
@@ -391,6 +490,14 @@ public class UserInterface extends JFrame {
         return rightPanel;
     }
 
+    /**
+     * Builds the octal input panel used for manually entering values to load into registers.
+     *
+     * <p>A document listener keeps {@link #octalInputValue} and the binary output field
+     * in sync whenever the user types in this field.
+     *
+     * @return the constructed octal input panel
+     */
     private JPanel getOctalInputPanel() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -420,6 +527,7 @@ public class UserInterface extends JFrame {
                 update();
             }
 
+            /** Updates the cached octal value and refreshes the binary output display. */
             void update() {
                 octalInputValue = textField.getText();
                 binaryOutputTextField.setText(EncoderStringUtil.getZeroPaddedBinaryString(textField.getText(), 16));
@@ -430,6 +538,12 @@ public class UserInterface extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * Builds the read-only binary output panel that displays the 16-bit binary equivalent
+     * of the value currently typed in the octal input field.
+     *
+     * @return the constructed binary output panel
+     */
     private JPanel getBinaryOutputPanel() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -451,6 +565,14 @@ public class UserInterface extends JFrame {
         return mainPanel;
     }
 
+    /**
+     * Builds the General Purpose Register (GPR0–GPR3) display panel.
+     *
+     * <p>Each register row shows the current value and a Load button to write the
+     * octal input value into that register.
+     *
+     * @return the constructed GPR panel
+     */
     private JPanel getGprPanel() {
         JPanel gprPanel = new JPanel();
         gprPanel.setLayout(new BoxLayout(gprPanel, BoxLayout.Y_AXIS));
@@ -464,6 +586,14 @@ public class UserInterface extends JFrame {
         return gprPanel;
     }
 
+    /**
+     * Builds the Index Register (IX1–IX3) display panel.
+     *
+     * <p>Each register row shows the current value and a Load button to write the
+     * octal input value into that register.
+     *
+     * @return the constructed IXR panel
+     */
     private JPanel getIxrPanel() {
         JPanel ixrPanel = new JPanel();
         ixrPanel.setLayout(new BoxLayout(ixrPanel, BoxLayout.Y_AXIS));
@@ -476,6 +606,14 @@ public class UserInterface extends JFrame {
         return ixrPanel;
     }
 
+    /**
+     * Builds the special registers panel (PC, MAR, MBR, IR).
+     *
+     * <p>PC, MAR, and MBR have Load buttons. IR is read-only (no Load button) because
+     * it is always set automatically by the CPU during instruction fetch.
+     *
+     * @return the constructed special registers panel
+     */
     private JPanel getSpecialRegistersPanel() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -484,15 +622,29 @@ public class UserInterface extends JFrame {
         mainPanel.add(getLabelledTextField(Register.PC));
         mainPanel.add(getLabelledTextField(Register.MAR));
         mainPanel.add(getLabelledTextField(Register.MBR));
-        mainPanel.add(getLabelledTextField(Register.IR, false));
+        mainPanel.add(getLabelledTextField(Register.IR, false));   // IR is read-only; no Load button.
 
         return mainPanel;
     }
 
+    /**
+     * Convenience overload that creates a labelled register row with a Load button.
+     *
+     * @param register the register to display
+     * @return the constructed register row panel
+     */
     private JPanel getLabelledTextField(Register register) {
         return getLabelledTextField(register, true);
     }
 
+    /**
+     * Creates a single register display row: a label, a read-only value field, and optionally
+     * a Load button that writes the current octal input into the register.
+     *
+     * @param register   the register to display
+     * @param withButton {@code true} to include a Load button; {@code false} for a read-only row
+     * @return the constructed register row panel
+     */
     private JPanel getLabelledTextField(Register register, boolean withButton) {
         JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -527,6 +679,7 @@ public class UserInterface extends JFrame {
 
                     textField.setText(OutputManager.getPaddedOctalValue(octalValue));
 
+                    // Also update the CPU's internal program counter when the PC register is loaded.
                     if (register == Register.PC) {
                         cpu.setProgramCounter(octalValue);
                     }

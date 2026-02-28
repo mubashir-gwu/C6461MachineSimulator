@@ -3,7 +3,17 @@ package opcode;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Static lookup table that maps instruction mnemonics to their numeric opcode values and types.
+ *
+ * <p>The table is populated once in a static initialiser and is used by both the assembler
+ * (to encode instructions) and the CPU (to decode and dispatch instructions at runtime).
+ *
+ * <p>All numeric opcode values are stored as octal integer literals to match the octal
+ * representation used throughout the C6461 architecture documentation.
+ */
 public class OpcodeLookupTable {
+    /** Internal map from mnemonic string to its {@link Opcode} descriptor. */
     private static final Map<String, Opcode> opcodeMap = new HashMap<>();
 
     static {
@@ -15,7 +25,7 @@ public class OpcodeLookupTable {
         opcodeMap.put("STX", new Opcode(042, OpcodeType.LOAD_STORE));
 
         // Transfer instructions.
-        opcodeMap.put("JZ", new Opcode(010, OpcodeType.TRANSFER));
+        opcodeMap.put("JZ",  new Opcode(010, OpcodeType.TRANSFER));
         opcodeMap.put("JNE", new Opcode(011, OpcodeType.TRANSFER));
         opcodeMap.put("JCC", new Opcode(012, OpcodeType.TRANSFER));
         opcodeMap.put("JMA", new Opcode(013, OpcodeType.TRANSFER));
@@ -45,15 +55,22 @@ public class OpcodeLookupTable {
         opcodeMap.put("RRC", new Opcode(032, OpcodeType.SHIFT_ROTATE));
 
         // I/O operations.
-        opcodeMap.put("IN", new Opcode(061, OpcodeType.IO));
+        opcodeMap.put("IN",  new Opcode(061, OpcodeType.IO));
         opcodeMap.put("OUT", new Opcode(062, OpcodeType.IO));
         opcodeMap.put("CHK", new Opcode(063, OpcodeType.IO));
 
         // Miscellaneous instructions.
-        opcodeMap.put("HLT", new Opcode(000, OpcodeType.MISC));
+        opcodeMap.put("HLT",  new Opcode(000, OpcodeType.MISC));
         opcodeMap.put("TRAP", new Opcode(030, OpcodeType.MISC));
     }
 
+    /**
+     * Returns the numeric opcode value for the given mnemonic.
+     *
+     * @param mnemonic the instruction mnemonic to look up (e.g. {@code "LDR"})
+     * @return the 6-bit opcode value as a Java int (in octal notation)
+     * @throws InvalidMnemonicException if {@code mnemonic} is not in the table
+     */
     public static int getOpcodeValue(String mnemonic) throws InvalidMnemonicException {
         if (!opcodeMap.containsKey(mnemonic)) {
             throw new InvalidMnemonicException(mnemonic);
@@ -61,6 +78,13 @@ public class OpcodeLookupTable {
         return opcodeMap.get(mnemonic).opcodeValue();
     }
 
+    /**
+     * Returns the {@link OpcodeType} for the given mnemonic string.
+     *
+     * @param mnemonic the instruction mnemonic to look up (e.g. {@code "LDR"})
+     * @return the {@link OpcodeType} that determines the instruction's encoding format
+     * @throws InvalidMnemonicException if {@code mnemonic} is not in the table
+     */
     public static OpcodeType getOpcodeType(String mnemonic) throws InvalidMnemonicException {
         if (!opcodeMap.containsKey(mnemonic)) {
             throw new InvalidMnemonicException(mnemonic);
@@ -68,6 +92,14 @@ public class OpcodeLookupTable {
         return opcodeMap.get(mnemonic).opcodeType();
     }
 
+    /**
+     * Returns the {@link OpcodeType} for a numeric opcode value decoded from a machine word.
+     *
+     * <p>Used by the CPU at runtime to classify an instruction after extracting its opcode bits.
+     *
+     * @param opcodeValue the 6-bit numeric opcode extracted from a 16-bit instruction word
+     * @return the corresponding {@link OpcodeType}, or {@code null} if the value is unrecognised
+     */
     public static OpcodeType getOpcodeType(int opcodeValue) {
         for (Opcode opcode : opcodeMap.values()) {
             if (opcode.opcodeValue() == opcodeValue) {
@@ -78,6 +110,14 @@ public class OpcodeLookupTable {
         return null;
     }
 
+    /**
+     * Returns the mnemonic string for a numeric opcode value decoded from a machine word.
+     *
+     * <p>Used by the CPU at runtime to look up the mnemonic for logging and dispatch purposes.
+     *
+     * @param opcodeValue the 6-bit numeric opcode extracted from a 16-bit instruction word
+     * @return the mnemonic string (e.g. {@code "LDR"}), or an empty string if unrecognised
+     */
     public static String getMnemonic(int opcodeValue) {
         for (Map.Entry<String, Opcode> entry : opcodeMap.entrySet()) {
             if (entry.getValue().opcodeValue() == opcodeValue) {

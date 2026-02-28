@@ -1,7 +1,35 @@
 package memory;
 
+/**
+ * Enumerates all registers available in the C6461 machine simulator.
+ *
+ * <p>The machine has four General Purpose Registers (GPRs), three Index Registers (IXRs),
+ * a Program Counter (PC), and three special-purpose registers used during memory access
+ * (MAR, MBR) and instruction decoding (IR).
+ */
 public enum Register {
-    GPR0, GPR1, GPR2, GPR3,
-    IX1, IX2, IX3,
-    PC, MAR, MBR, IR,
+    /** General Purpose Register 0. Used as an accumulator or operand in arithmetic/logic instructions. */
+    GPR0,
+    /** General Purpose Register 1. */
+    GPR1,
+    /** General Purpose Register 2. */
+    GPR2,
+    /** General Purpose Register 3. */
+    GPR3,
+
+    /** Index Register 1. Used for indexed addressing: EA = address + IX. */
+    IX1,
+    /** Index Register 2. Used for indexed addressing: EA = address + IX. */
+    IX2,
+    /** Index Register 3. Used for indexed addressing: EA = address + IX. */
+    IX3,
+
+    /** Program Counter. Holds the address of the next instruction to execute. */
+    PC,
+    /** Memory Address Register. Holds the effective address for the current memory operation. */
+    MAR,
+    /** Memory Buffer Register. Holds the data read from or to be written to memory. */
+    MBR,
+    /** Instruction Register. Holds the full 16-bit word of the currently executing instruction. */
+    IR,
 }
