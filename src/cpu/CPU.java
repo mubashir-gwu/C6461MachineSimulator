@@ -80,7 +80,6 @@ public class CPU {
     }
 
     public void executeNextInstruction() {
-        // final int value = memory.getMemoryAt(programCounter);
         final int value;
 
         try {
