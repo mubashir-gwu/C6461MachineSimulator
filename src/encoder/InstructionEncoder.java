@@ -103,7 +103,7 @@ public class InstructionEncoder {
         sb.append(getZeroPaddedBinaryString(instruction.getOperands()[0], 2));
 
         // The `A/L` and `R/L` fields are already a single-length binary string, so they can be appended directly.
-        sb.append(instruction.getOperands()[1]);
+        sb.append(instruction.getOperands()[3]);
         sb.append(instruction.getOperands()[2]);
 
         // The `count` field is preceded by an empty space of 2 bits, so fill it with `00`.
