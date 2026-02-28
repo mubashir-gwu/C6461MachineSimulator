@@ -27,12 +27,15 @@ public class UserInterface extends JFrame {
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
     private Path programFilePath;
     private CPU cpu;
+    private JButton runButton;
+    private JButton stepButton;
+    private JButton haltButton;
 
     private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
     private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
 
     private void loadOctalValueIntoRegister(Register register, String octalValue) {
-        RegisterManager.loadRegister(register, Integer.parseInt(octalValue, 8));
+        cpu.getRegisterManager().loadRegister(register, Integer.parseInt(octalValue, 8));
     }
 
     public UserInterface() {
@@ -139,6 +142,16 @@ public class UserInterface extends JFrame {
         return centerPanel;
     }
 
+    private void syncUIWithCPU() {
+        for (Register register : Register.values()) {
+            registerTextFieldMap.get(register).setText(OutputManager.getPaddedOctalValue(cpu.getRegisterManager().getRegisterValue(register)));
+        }
+
+        stepButton.setEnabled(!cpu.isHalted());
+        runButton.setEnabled(!cpu.isHalted());
+        haltButton.setEnabled(!cpu.isHalted());
+    }
+
     private JPanel getButtonsPanel() {
         JPanel mainPanel = new JPanel();
         mainPanel.setLayout(new BoxLayout(mainPanel, BoxLayout.Y_AXIS));
@@ -221,19 +234,29 @@ public class UserInterface extends JFrame {
             registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
         });
 
-        JButton runButton = new JButton("Run");
+        runButton = new JButton("Run");
         runButton.addActionListener(e -> {
-            System.out.println("TODO");
+            cpu.executeAllInstructions();
+            syncUIWithCPU();
+
+            outputManager.writeMessage("Execution halted.");
         });
 
-        JButton stepButton = new JButton("Step");
+        stepButton = new JButton("Step");
         stepButton.addActionListener(e -> {
-            System.out.println("TODO");
+            cpu.executeNextInstruction();
+            syncUIWithCPU();
+
+            if (cpu.isHalted()) {
+                outputManager.writeMessage("Execution halted.");
+            }
         });
 
-        JButton haltButton = new JButton("Halt");
+        haltButton = new JButton("Halt");
         haltButton.addActionListener(e -> {
-            System.out.println("TODO");
+            cpu.setHalted(true);
+            syncUIWithCPU();
+            outputManager.writeMessage("Execution halted by user.");
         });
 
         JButton iplButton = new JButton("IPL");
@@ -256,10 +279,16 @@ public class UserInterface extends JFrame {
             FileWriter.writeListingFile(instructions, programName);
             Path loadFilePath = FileWriter.writeLoadFile(instructions, programName);
 
+            // Reset the state for each IPL.
+            this.cpu = new CPU();
+            cpu.setOutputManager(outputManager);
+
             int programStartAddress = cpu.loadProgramToMemory(loadFilePath);
             this.cpu.setProgramCounter(programStartAddress);
 
             registerTextFieldMap.get(Register.PC).setText(OutputManager.getPaddedOctalValue(programStartAddress));
+
+            syncUIWithCPU();
 
             outputManager.writeMessage("Loaded program " + programName + " into memory.");
         });
@@ -309,6 +338,7 @@ public class UserInterface extends JFrame {
 
         // Initialize the ErrorManager with the `outputTextArea` so that it can write the errors to it.
         outputManager = new OutputManager(outputTextArea);
+        cpu.setOutputManager(outputManager);
 
         rightPanel.add(outputPanel);
 

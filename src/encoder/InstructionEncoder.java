@@ -65,7 +65,7 @@ public class InstructionEncoder {
         }
 
         // Add the `address` field at the end.
-        sb.append(getZeroPaddedBinaryString(instruction.getOperands()[2], 5));
+        sb.append(getZeroPaddedBinaryString(instruction.getOperands()[operandIndex], 5));
 
         return sb.toString();
     }

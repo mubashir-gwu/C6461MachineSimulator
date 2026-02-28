@@ -67,4 +67,24 @@ public class OpcodeLookupTable {
         }
         return opcodeMap.get(mnemonic).opcodeType();
     }
+
+    public static OpcodeType getOpcodeType(int opcodeValue) {
+        for (Opcode opcode : opcodeMap.values()) {
+            if (opcode.opcodeValue() == opcodeValue) {
+                return opcode.opcodeType();
+            }
+        }
+
+        return null;
+    }
+
+    public static String getMnemonic(int opcodeValue) {
+        for (Map.Entry<String, Opcode> entry : opcodeMap.entrySet()) {
+            if (entry.getValue().opcodeValue() == opcodeValue) {
+                return entry.getKey();
+            }
+        }
+
+        return "";
+    }
 }
