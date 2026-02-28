@@ -3,6 +3,14 @@
 **George Washington University — CS6461: Computer Architectures**
 **Part I Deliverable**
 
+## Team Members
+
+- Chandle Mubashir
+- Tshiswaka Mukendi Patrick
+- Miguel Martinez
+
+---
+
 A Java-based simulator for the C6461 16-bit CISC computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console.
 
 ---
