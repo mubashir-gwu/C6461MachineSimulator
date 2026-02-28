@@ -168,13 +168,21 @@ public class UserInterface extends JFrame {
                 return;
             }
 
-            int marValue = Integer.parseInt(marText, 8);
+            final int marValue = Integer.parseInt(marText, 8);
+            final int mbrValue;
+            try {
+                mbrValue = cpu.getMemory().getMemoryAt(marValue);
+            } catch (IndexOutOfBoundsException ex) {
+                outputManager.writeError(ex.getMessage());
+                return;
+            }
+
             cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
-            cpu.getRegisterManager().loadRegister(Register.MBR, cpu.getMemory().getMemoryAt(marValue));
+            cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
 
             syncUIWithCPU();
 
-            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(mbrValue) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton loadPlusButton = new JButton("Load+");
@@ -186,10 +194,18 @@ public class UserInterface extends JFrame {
             }
 
             int marValue = Integer.parseInt(marText, 8);
-            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
-            cpu.getRegisterManager().loadRegister(Register.MBR, cpu.getMemory().getMemoryAt(marValue));
+            int mbrValue;
+            try {
+                mbrValue = cpu.getMemory().getMemoryAt(marValue);
+            } catch (IndexOutOfBoundsException ex) {
+                outputManager.writeError(ex.getMessage());
+                return;
+            }
 
-            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
+
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(mbrValue) + " from address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1 and display the value at the new address.
             marValue += 1;
@@ -218,7 +234,13 @@ public class UserInterface extends JFrame {
             cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
             cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
 
-            cpu.getMemory().setMemoryAt(marValue, mbrValue);
+            try {
+                cpu.getMemory().setMemoryAt(marValue, mbrValue);
+            } catch (IndexOutOfBoundsException ex) {
+                outputManager.writeError(ex.getMessage());
+                return;
+            }
+
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
 
             syncUIWithCPU();
@@ -243,7 +265,13 @@ public class UserInterface extends JFrame {
             cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
             cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
 
-            cpu.getMemory().setMemoryAt(marValue, mbrValue);
+            try {
+                cpu.getMemory().setMemoryAt(marValue, mbrValue);
+            } catch (IndexOutOfBoundsException ex) {
+                outputManager.writeError(ex.getMessage());
+                return;
+            }
+
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1.

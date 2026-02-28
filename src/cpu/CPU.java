@@ -1,6 +1,5 @@
 package cpu;
 
-import encoder.EncoderStringUtil;
 import fileutil.FileReader;
 import memory.Memory;
 import memory.Register;
@@ -51,7 +50,12 @@ public class CPU {
             int location = Integer.parseInt(tokens[0], 8);
             int value = Integer.parseInt(tokens[1], 8);
 
-            memory.setMemoryAt(location, value);
+            try {
+                memory.setMemoryAt(location, value);
+            } catch (IndexOutOfBoundsException e) {
+                outputManager.writeError(e.getMessage());
+                return -1;
+            }
 
             // Keep only the first 6 bits as that's where the opcode is stored.
             final int opcode = value >> 10;
@@ -76,7 +80,15 @@ public class CPU {
     }
 
     public void executeNextInstruction() {
-        final int value = memory.getMemoryAt(programCounter);
+        // final int value = memory.getMemoryAt(programCounter);
+        final int value;
+
+        try {
+            value = memory.getMemoryAt(programCounter);
+        } catch (IndexOutOfBoundsException e) {
+            outputManager.writeError(e.getMessage());
+            return;
+        }
 
         final int opcode = value >> 10;
         final OpcodeType opcodeType = OpcodeLookupTable.getOpcodeType(opcode);
@@ -158,30 +170,60 @@ public class CPU {
 
         if (i == 1) {
             // Indirect memory addressing;
-            ea = memory.getMemoryAt(ea);
+            try {
+                ea = memory.getMemoryAt(ea);
+            } catch (IndexOutOfBoundsException e) {
+                outputManager.writeError(e.getMessage());
+                return;
+            }
         }
 
         registerManager.loadRegister(Register.MAR, ea);
 
+        int value;
         switch (opcodeMnemonic) {
             case "LDR":
-                registerManager.loadRegister(Register.MBR, memory.getMemoryAt(ea));
-                registerManager.loadRegister(selectedGeneralRegister, memory.getMemoryAt(ea));
+                try {
+                    value = memory.getMemoryAt(ea);
+                } catch (IndexOutOfBoundsException e) {
+                    outputManager.writeError(e.getMessage());
+                    return;
+                }
+
+                registerManager.loadRegister(Register.MBR, value);
+                registerManager.loadRegister(selectedGeneralRegister, value);
                 break;
             case "STR":
                 registerManager.loadRegister(Register.MBR, registerManager.getRegisterValue(selectedGeneralRegister));
-                memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedGeneralRegister));
+                try {
+                    memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedGeneralRegister));
+                } catch (IndexOutOfBoundsException e) {
+                    outputManager.writeError(e.getMessage());
+                    return;
+                }
                 break;
             case "LDA":
                 registerManager.loadRegister(selectedGeneralRegister, ea);
                 break;
             case "LDX":
-                registerManager.loadRegister(Register.MBR, memory.getMemoryAt(ea));
-                registerManager.loadRegister(selectedIndexRegister, memory.getMemoryAt(ea));
+                try {
+                    value = memory.getMemoryAt(ea);
+                } catch (IndexOutOfBoundsException e) {
+                    outputManager.writeError(e.getMessage());
+                    return;
+                }
+
+                registerManager.loadRegister(Register.MBR, value);
+                registerManager.loadRegister(selectedIndexRegister, value);
                 break;
             case "STX":
                 registerManager.loadRegister(Register.MBR, registerManager.getRegisterValue(selectedIndexRegister));
-                memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedIndexRegister));
+                try {
+                    memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedIndexRegister));
+                } catch (IndexOutOfBoundsException e) {
+                    outputManager.writeError(e.getMessage());
+                    return;
+                }
                 break;
         }
 
