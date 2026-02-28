@@ -34,6 +34,7 @@ javac -d out src/Main.java src/cpu/*.java src/encoder/*.java src/fileutil/*.java
 To package as a JAR:
 
 ```bash
+mkdir -p out
 jar --create --file C6461Assembler.jar --main-class Main -C out .
 ```
 
