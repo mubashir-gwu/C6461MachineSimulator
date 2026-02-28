@@ -89,7 +89,7 @@ public class UserInterface extends JFrame {
     public UserInterface() {
         cpu = new CPU();
 
-        setTitle("C6461 Assembler");
+        setTitle("C6461 Machine Simulator");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);     // Exit the application when the window is closed.
         setSize(1000, 700);
         setLocationRelativeTo(null);                        // Center the window on the screen.

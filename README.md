@@ -35,7 +35,7 @@ To package as a JAR:
 
 ```bash
 mkdir -p out
-jar --create --file C6461Assembler.jar --main-class Main -C out .
+jar --create --file C6461MachineSimulator.jar --main-class Main -C out .
 ```
 
 ### Running with IntelliJ IDEA
@@ -49,7 +49,7 @@ Open the project in IntelliJ IDEA. The `Main` class in `src/Main.java` is the en
 ### From a JAR file
 
 ```bash
-java -jar C6461Assembler.jar
+java -jar C6461MachineSimulator.jar
 ```
 
 ### From compiled classes
@@ -221,7 +221,7 @@ When IPL is pressed, two files are generated in the same directory as the source
 ## Project Structure
 
 ```
-C6461Assembler/
+C6461MachineSimulator/
 ├── src/
 │   ├── Main.java                        # Application entry point
 │   ├── cpu/

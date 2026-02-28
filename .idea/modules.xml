@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/C6461Assembler.iml" filepath="$PROJECT_DIR$/C6461Assembler.iml" />
+      <module fileurl="file://$PROJECT_DIR$/C6461MachineSimulator.iml" filepath="$PROJECT_DIR$/C6461MachineSimulator.iml" />
     </modules>
   </component>
 </project>

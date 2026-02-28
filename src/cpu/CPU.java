@@ -322,8 +322,6 @@ public class CPU {
                 }
                 break;
         }
-
-        System.out.println("Executed: " + opcodeMnemonic + " " + r + "," + ix + "," + address + "," + i);
     }
 
     /**
