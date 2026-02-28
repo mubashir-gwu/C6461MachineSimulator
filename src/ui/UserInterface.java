@@ -19,6 +19,7 @@ public class UserInterface extends JFrame {
     private JTextField binaryOutputTextField;
     private String octalInputValue = "";
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
+    private String programFilePath = "";
 
     private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
     private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
@@ -30,26 +31,65 @@ public class UserInterface extends JFrame {
     public UserInterface() {
         setTitle("C6461 Assembler");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);     // Exit the application when the window is closed.
-        setSize(1000, 600);
+        setSize(1000, 700);
         setLocationRelativeTo(null);                        // Center the window on the screen.
 
-        JPanel root = new JPanel(new BorderLayout(10, 10));
+        JPanel root = new JPanel();
+        root.setLayout(new BoxLayout(root, BoxLayout.Y_AXIS));
         root.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JLabel title = new JLabel("C6461 Machine Simulator");
+        title.setAlignmentX(Component.CENTER_ALIGNMENT);
         title.setFont(new Font("Arial", Font.BOLD, 24));
+
+        JPanel executionPanels = new JPanel(new GridLayout(1, 3, 10, 10));
+
+        executionPanels.add(getLeftPanel());
+        executionPanels.add(getCenterPanel());
+        executionPanels.add(getRightPanel());
+
         root.add(title, BorderLayout.NORTH);
-
-        JPanel panels = new JPanel(new GridLayout(1, 3, 10, 10));
-
-        panels.add(getLeftPanel());
-        panels.add(getCenterPanel());
-        panels.add(getRightPanel());
-        root.add(panels, BorderLayout.CENTER);
-
+        root.add(Box.createVerticalStrut(10));
+        root.add(getFilePickerPanel());
+        root.add(Box.createVerticalStrut(10));
+        root.add(executionPanels);
         memory = new Memory();
 
         setContentPane(root);
+    }
+
+    private JPanel getFilePickerPanel() {
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Load Program"),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)
+        ));
+        mainPanel.setBackground(Color.getHSBColor(0.65f, 0.1f, 0.9f));
+
+        JLabel label = new JLabel("Program: ");
+
+        JTextField textField = new JTextField(20);
+        textField.setEditable(false);
+        textField.setFocusable(false);
+
+        JButton button = new JButton("Browse");
+        button.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            int returnVal = fileChooser.showOpenDialog(this);
+
+            if (returnVal == JFileChooser.APPROVE_OPTION) {
+                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
+                textField.setText(filePath);
+                programFilePath = filePath;
+                outputManager.writeMessage("Loaded program from " + filePath);
+            }
+        });
+
+        mainPanel.add(label, BorderLayout.WEST);
+        mainPanel.add(textField, BorderLayout.CENTER);
+        mainPanel.add(button, BorderLayout.EAST);
+        mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
+        return mainPanel;
     }
 
     private JPanel getLeftPanel() {
