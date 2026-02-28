@@ -89,6 +89,8 @@ Sample programs are provided in the `input/` directory:
 
 ### Console Layout
 
+![C6461 Machine Simulator](assets/C6461%20Machine%20Simulator.png)
+
 The simulator window is divided into four regions:
 
 ```
