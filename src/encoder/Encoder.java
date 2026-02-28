@@ -87,6 +87,10 @@ public class Encoder {
             line = line.contains(";") ? line.substring(0, line.indexOf(";")) : line;
             line = line.trim();
 
+            // Skip the comment-only lines.
+            if (line.isEmpty()) {
+                continue;
+            }
 
             final String[] tokens = line.split("\\s+");
             final String label;
