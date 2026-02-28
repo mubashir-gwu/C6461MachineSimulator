@@ -1,11 +1,11 @@
 package ui;
 
+import cpu.CPU;
 import encoder.Encoder;
 import encoder.EncoderStringUtil;
 import fileutil.FileReader;
 import fileutil.FileWriter;
 import instruction.Instruction;
-import memory.Memory;
 import memory.Register;
 import memory.RegisterManager;
 import outputmanager.OutputManager;
@@ -22,11 +22,11 @@ import java.util.Map;
 
 public class UserInterface extends JFrame {
     private OutputManager outputManager;
-    private final Memory memory;
     private JTextField binaryOutputTextField;
     private String octalInputValue = "";
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
     private Path programFilePath;
+    private CPU cpu;
 
     private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
     private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
@@ -36,6 +36,8 @@ public class UserInterface extends JFrame {
     }
 
     public UserInterface() {
+        cpu = new CPU();
+
         setTitle("C6461 Assembler");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);     // Exit the application when the window is closed.
         setSize(1000, 700);
@@ -60,7 +62,6 @@ public class UserInterface extends JFrame {
         root.add(getFilePickerPanel());
         root.add(Box.createVerticalStrut(10));
         root.add(executionPanels);
-        memory = new Memory();
 
         setContentPane(root);
     }
@@ -156,8 +157,8 @@ public class UserInterface extends JFrame {
             }
 
             final int marValue = Integer.parseInt(marText, 8);
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
-            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)));
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
         JButton loadPlusButton = new JButton("Load+");
@@ -169,8 +170,8 @@ public class UserInterface extends JFrame {
             }
 
             final int marValue = Integer.parseInt(marText, 8);
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)));
-            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(memory.getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)));
+            outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1.
             registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
@@ -191,7 +192,7 @@ public class UserInterface extends JFrame {
 
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-            memory.setMemoryAt(marValue, mbrValue);
+            cpu.getMemory().setMemoryAt(marValue, mbrValue);
 
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
         });
@@ -211,7 +212,7 @@ public class UserInterface extends JFrame {
 
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-            memory.setMemoryAt(marValue, mbrValue);
+            cpu.getMemory().setMemoryAt(marValue, mbrValue);
 
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
 
@@ -236,6 +237,11 @@ public class UserInterface extends JFrame {
 
         JButton iplButton = new JButton("IPL");
         iplButton.addActionListener(e -> {
+            if (programFilePath == null) {
+                outputManager.writeError("Select a program first.");
+                return;
+            }
+
             List<String> programLines = FileReader.readFile(programFilePath);
             if (programLines == null) {
                 outputManager.writeError("Could not read program file.");
@@ -249,7 +255,11 @@ public class UserInterface extends JFrame {
             FileWriter.writeListingFile(instructions, programName);
             Path loadFilePath = FileWriter.writeLoadFile(instructions, programName);
 
-            memory.loadProgramToMemory(loadFilePath);
+            int programStartAddress = cpu.loadProgramToMemory(loadFilePath);
+            this.cpu.setProgramCounter(programStartAddress);
+
+            registerTextFieldMap.get(Register.PC).setText(OutputManager.getPaddedOctalValue(programStartAddress));
+
             outputManager.writeMessage("Loaded program " + programName + " into memory.");
         });
         iplButton.setBackground(Color.RED);
@@ -358,7 +368,6 @@ public class UserInterface extends JFrame {
         textField.setFont(monospaceBoldFont);
         mainPanel.add(textField, BorderLayout.CENTER);
         mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
-
 
         binaryOutputTextField = textField;
 

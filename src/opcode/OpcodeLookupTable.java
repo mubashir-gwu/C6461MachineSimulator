@@ -67,10 +67,4 @@ public class OpcodeLookupTable {
         }
         return opcodeMap.get(mnemonic).opcodeType();
     }
-
-    public static void printOpcodeMap() {
-        for (Map.Entry<String, Opcode> entry : opcodeMap.entrySet()) {
-            System.out.println(entry.getKey() + ": " + entry.getValue().opcodeValue() + " (" + entry.getValue().opcodeType() + ")");
-        }
-    }
 }

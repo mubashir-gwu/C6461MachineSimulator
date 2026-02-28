@@ -18,25 +18,6 @@ public class Encoder {
         return instructions;
     }
 
-    private static void prettyPrintListingFile(List<Instruction> instructions) {
-        for (Instruction instruction : instructions) {
-            System.out.println(instruction.toListingFileString());
-        }
-    }
-
-    private static void prettyPrintLoadFile(List<Instruction> instructions) {
-        for (Instruction instruction : instructions) {
-            if (instruction.getOctal().isEmpty()) {
-                // If the instruction was a `LOC` line, it won't have an address or the octal representation.
-                // So, skip it as it will just print a blank line.
-                continue;
-            }
-
-            System.out.println(instruction.toLoadFileString());
-        }
-    }
-
-
     private static void encodeLines(List<Instruction> instructions) {
         for (Instruction instruction : instructions) {
             if (instruction.getMnemonic().equals("LOC")) {
