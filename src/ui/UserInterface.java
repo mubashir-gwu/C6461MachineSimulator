@@ -7,7 +7,6 @@ import fileutil.FileReader;
 import fileutil.FileWriter;
 import instruction.Instruction;
 import memory.Register;
-import memory.RegisterManager;
 import outputmanager.OutputManager;
 
 import javax.swing.*;
@@ -169,8 +168,12 @@ public class UserInterface extends JFrame {
                 return;
             }
 
-            final int marValue = Integer.parseInt(marText, 8);
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)));
+            int marValue = Integer.parseInt(marText, 8);
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            cpu.getRegisterManager().loadRegister(Register.MBR, cpu.getMemory().getMemoryAt(marValue));
+
+            syncUIWithCPU();
+
             outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
         });
 
@@ -182,13 +185,18 @@ public class UserInterface extends JFrame {
                 return;
             }
 
-            final int marValue = Integer.parseInt(marText, 8);
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)));
+            int marValue = Integer.parseInt(marText, 8);
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            cpu.getRegisterManager().loadRegister(Register.MBR, cpu.getMemory().getMemoryAt(marValue));
+
             outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1 and display the value at the new address.
-            registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
-            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue + 1)));
+            marValue += 1;
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            // cpu.getRegisterManager().loadRegister(Register.MBR, cpu.getMemory().getMemoryAt(marValue));
+
+            syncUIWithCPU();
         });
 
         JButton storeButton = new JButton("Store");
@@ -206,9 +214,14 @@ public class UserInterface extends JFrame {
 
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-            cpu.getMemory().setMemoryAt(marValue, mbrValue);
 
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
+
+            cpu.getMemory().setMemoryAt(marValue, mbrValue);
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
+
+            syncUIWithCPU();
         });
 
         JButton storePlusButton = new JButton("Store+");
@@ -226,12 +239,17 @@ public class UserInterface extends JFrame {
 
             final int marValue = Integer.parseInt(registerTextFieldMap.get(Register.MAR).getText(), 8);
             final int mbrValue = Integer.parseInt(registerTextFieldMap.get(Register.MBR).getText(), 8);
-            cpu.getMemory().setMemoryAt(marValue, mbrValue);
 
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue);
+            cpu.getRegisterManager().loadRegister(Register.MBR, mbrValue);
+
+            cpu.getMemory().setMemoryAt(marValue, mbrValue);
             outputManager.writeMessage("Stored value " + OutputManager.getPaddedOctalValue(mbrValue) + " at address " + OutputManager.getPaddedOctalValue(marValue));
 
             // Increment the MAR register by 1.
-            registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
+            cpu.getRegisterManager().loadRegister(Register.MAR, marValue + 1);
+
+            syncUIWithCPU();
         });
 
         runButton = new JButton("Run");
@@ -480,6 +498,10 @@ public class UserInterface extends JFrame {
                     outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(octalValue) + " into register " + register);
 
                     textField.setText(OutputManager.getPaddedOctalValue(octalValue));
+
+                    if (register == Register.PC) {
+                        cpu.setProgramCounter(octalValue);
+                    }
                 } catch (NumberFormatException ex) {
                     outputManager.writeError("Invalid octal value: " + octalInputValue);
                 }
