@@ -5,8 +5,8 @@
 
 ## Team Members
 
-- Chandle Mubashir
-- Tshiswaka Mukendi Patrick
+- Mubashir Chandle
+- Mukendi Patrick Tshiswala
 - Miguel Martinez
 
 ---
