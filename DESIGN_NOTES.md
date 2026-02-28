@@ -9,7 +9,7 @@
 
 This document describes the design decisions, object model, module interfaces, and architectural rationale for the C6461 Machine Simulator, Part I.
 
-The simulator models a 16-bit CISC processor based on the C6461 Instruction Set Architecture. Part I covers:
+The simulator models a 16-bit processor based on the C6461 Instruction Set Architecture. Part I covers:
 
 - A two-pass assembler that translates `.asm` source files to octal machine code
 - A 2048-word single-port memory

@@ -11,7 +11,7 @@
 
 ---
 
-A Java-based simulator for the C6461 16-bit CISC computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console.
+A Java-based simulator for the C6461 16-bit computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console.
 
 ---
 
@@ -28,7 +28,7 @@ The project is structured as a plain Java module (IntelliJ IDEA). To compile fro
 ```bash
 # From the project root directory
 mkdir -p out
-javac -d out -sourcepath src $(find src -name "*.java")
+javac -d out src/Main.java src/cpu/*.java src/encoder/*.java src/fileutil/*.java src/instruction/*.java src/memory/*.java src/opcode/*.java src/outputmanager/*.java src/ui/*.java
 ```
 
 To package as a JAR:
@@ -59,6 +59,19 @@ java -cp out Main
 
 The simulator window will open immediately upon launch. No command-line arguments are required.
 
+### Sample Programs
+
+Ready-to-run sample programs are provided in the `input/` directory:
+
+- `input/test_program.asm` — Demonstrates load/store, indexed, and indirect addressing with label-based control flow
+- `input/test_part1.asm` — Part I deliverable test covering all Load/Store instructions and all four addressing modes
+
+### Loading and Running a Program
+
+1. Click the **Browse** button at the top of the simulator window. A file picker dialog will open — navigate to any `.asm` file (for example, one of the samples in `input/`) and select it. The file path appears in the program field.
+2. Press **IPL** (the red button). The assembler compiles the `.asm` source into a `.load` machine-code file and a `.lst` listing file (written alongside the source), then loads the program into simulated memory and sets the PC to the program's start address.
+3. Press **Step** to execute one instruction at a time and observe register changes, or press **Run** to execute the full program until a `HLT` instruction.
+
 ---
 
 ## Preparing an Assembly Program
@@ -77,14 +90,14 @@ LABEL: LDR 0,0,10   ; Load R0 from address 10
 
 **Syntax rules:**
 
-| Element | Format | Example |
-|---|---|---|
-| Location directive | `LOC <decimal address>` | `LOC 500` |
-| Data word | `DATA <decimal value>` | `DATA 42` |
-| Label definition | `LABEL: MNEMONIC operands` | `Start: LDR 0,0,5` |
-| Label reference | Used as an operand | `JZ 0,0,Start` |
-| Comment | `;` to end of line | `; my comment` |
-| Instruction | `MNEMONIC r,ix,addr[,i]` | `LDR 1,2,15,1` |
+| Element            | Format                     | Example            |
+| ------------------ | -------------------------- | ------------------ |
+| Location directive | `LOC <decimal address>`    | `LOC 500`          |
+| Data word          | `DATA <decimal value>`     | `DATA 42`          |
+| Label definition   | `LABEL: MNEMONIC operands` | `Start: LDR 0,0,5` |
+| Label reference    | Used as an operand         | `JZ 0,0,Start`     |
+| Comment            | `;` to end of line         | `; my comment`     |
+| Instruction        | `MNEMONIC r,ix,addr[,i]`   | `LDR 1,2,15,1`     |
 
 Sample programs are provided in the `input/` directory:
 
@@ -121,20 +134,20 @@ The simulator window is divided into four regions:
 
 **General Purpose Registers (GPR)**
 
-| Register | Description |
-|---|---|
-| GPR0 | General purpose register 0 |
-| GPR1 | General purpose register 1 |
-| GPR2 | General purpose register 2 |
-| GPR3 | General purpose register 3 |
+| Register | Description                |
+| -------- | -------------------------- |
+| GPR0     | General purpose register 0 |
+| GPR1     | General purpose register 1 |
+| GPR2     | General purpose register 2 |
+| GPR3     | General purpose register 3 |
 
 **Index Registers (IX)**
 
-| Register | Description |
-|---|---|
-| IX1 | Index register 1 |
-| IX2 | Index register 2 |
-| IX3 | Index register 3 |
+| Register | Description      |
+| -------- | ---------------- |
+| IX1      | Index register 1 |
+| IX2      | Index register 2 |
+| IX3      | Index register 3 |
 
 Each register row shows its current value in **octal** and has a **Load** button. To manually load a value into a register:
 
@@ -149,26 +162,26 @@ Each register row shows its current value in **octal** and has a **Load** button
 
 **Special Registers/Counters**
 
-| Register | Description |
-|---|---|
-| PC  | Program Counter — address of the next instruction to execute |
-| MAR | Memory Address Register — address used by Load/Store operations |
-| MBR | Memory Buffer Register — data read from or written to memory |
-| IR  | Instruction Register — binary encoding of the last fetched instruction (read-only display) |
+| Register | Description                                                                                |
+| -------- | ------------------------------------------------------------------------------------------ |
+| PC       | Program Counter — address of the next instruction to execute                               |
+| MAR      | Memory Address Register — address used by Load/Store operations                            |
+| MBR      | Memory Buffer Register — data read from or written to memory                               |
+| IR       | Instruction Register — binary encoding of the last fetched instruction (read-only display) |
 
 PC and MAR have **Load** buttons; MBR has a **Load** button; IR is display-only.
 
 **Load/Store/Run Controls**
 
-| Button | Action |
-|---|---|
-| **Load** | Reads the value at address `MAR` from memory and places it in `MBR` |
-| **Load+** | Same as Load, then auto-increments `MAR` by 1 |
-| **Store** | Writes the value in `MBR` to memory at address `MAR` |
-| **Store+** | Same as Store, then auto-increments `MAR` by 1 |
-| **Run** | Runs the program from the current `PC` until a `HLT` instruction |
-| **Step** | Executes a single instruction at the current `PC`, then pauses |
-| **Halt** | Immediately halts execution |
+| Button        | Action                                                                                                                                                                   |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Load**      | Reads the value at address `MAR` from memory and places it in `MBR`                                                                                                      |
+| **Load+**     | Same as Load, then auto-increments `MAR` by 1                                                                                                                            |
+| **Store**     | Writes the value in `MBR` to memory at address `MAR`                                                                                                                     |
+| **Store+**    | Same as Store, then auto-increments `MAR` by 1                                                                                                                           |
+| **Run**       | Runs the program from the current `PC` until a `HLT` instruction                                                                                                         |
+| **Step**      | Executes a single instruction at the current `PC`, then pauses                                                                                                           |
+| **Halt**      | Immediately halts execution                                                                                                                                              |
 | **IPL** (red) | Initial Program Load — assembles the selected `.asm` file, writes listing and load files, loads the machine code into memory, and sets `PC` to the program start address |
 
 #### Right Panel — Messages/Errors
@@ -197,9 +210,9 @@ Displays runtime messages, confirmations, and error reports. Examples:
 
 When IPL is pressed, two files are generated in the same directory as the source:
 
-| File | Description |
-|---|---|
-| `<name>.lst` | Listing file — each line shows octal address, octal encoding, and original source |
+| File          | Description                                                                             |
+| ------------- | --------------------------------------------------------------------------------------- |
+| `<name>.lst`  | Listing file — each line shows octal address, octal encoding, and original source       |
 | `<name>.load` | Load file — pairs of `<octal address> <octal value>` consumed by the simulator's loader |
 
 ---
@@ -248,83 +261,83 @@ C6461Assembler/
 
 ### Load/Store
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| LDR | 001 | Load Register from memory |
-| STR | 002 | Store Register to memory |
-| LDA | 003 | Load Register with Effective Address |
-| LDX | 041 | Load Index Register from memory |
-| STX | 042 | Store Index Register to memory |
+| Mnemonic | Opcode (octal) | Description                          |
+| -------- | -------------- | ------------------------------------ |
+| LDR      | 001            | Load Register from memory            |
+| STR      | 002            | Store Register to memory             |
+| LDA      | 003            | Load Register with Effective Address |
+| LDX      | 041            | Load Index Register from memory      |
+| STX      | 042            | Store Index Register to memory       |
 
 ### Transfer of Control
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| JZ  | 010 | Jump if Zero |
-| JNE | 011 | Jump if Not Equal to Zero |
-| JCC | 012 | Jump if Condition Code set |
-| JMA | 013 | Unconditional Jump |
-| JSR | 014 | Jump to Subroutine |
-| RFS | 015 | Return from Subroutine |
-| SOB | 016 | Subtract One and Branch |
-| JGE | 017 | Jump if Greater or Equal |
+| Mnemonic | Opcode (octal) | Description                |
+| -------- | -------------- | -------------------------- |
+| JZ       | 010            | Jump if Zero               |
+| JNE      | 011            | Jump if Not Equal to Zero  |
+| JCC      | 012            | Jump if Condition Code set |
+| JMA      | 013            | Unconditional Jump         |
+| JSR      | 014            | Jump to Subroutine         |
+| RFS      | 015            | Return from Subroutine     |
+| SOB      | 016            | Subtract One and Branch    |
+| JGE      | 017            | Jump if Greater or Equal   |
 
 ### Arithmetic
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| AMR | 004 | Add Memory to Register |
-| SMR | 005 | Subtract Memory from Register |
-| AIR | 006 | Add Immediate to Register |
-| SIR | 007 | Subtract Immediate from Register |
+| Mnemonic | Opcode (octal) | Description                      |
+| -------- | -------------- | -------------------------------- |
+| AMR      | 004            | Add Memory to Register           |
+| SMR      | 005            | Subtract Memory from Register    |
+| AIR      | 006            | Add Immediate to Register        |
+| SIR      | 007            | Subtract Immediate from Register |
 
 ### Multiply/Divide
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| MLT | 070 | Multiply Register by Register |
-| DVD | 071 | Divide Register by Register |
+| Mnemonic | Opcode (octal) | Description                   |
+| -------- | -------------- | ----------------------------- |
+| MLT      | 070            | Multiply Register by Register |
+| DVD      | 071            | Divide Register by Register   |
 
 ### Logical
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| TRR | 072 | Test the Equality of Two Registers |
-| AND | 073 | Logical AND |
-| ORR | 074 | Logical OR |
-| NOT | 075 | Logical NOT |
+| Mnemonic | Opcode (octal) | Description                        |
+| -------- | -------------- | ---------------------------------- |
+| TRR      | 072            | Test the Equality of Two Registers |
+| AND      | 073            | Logical AND                        |
+| ORR      | 074            | Logical OR                         |
+| NOT      | 075            | Logical NOT                        |
 
 ### Shift/Rotate
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| SRC | 031 | Shift Register by Count |
-| RRC | 032 | Rotate Register by Count |
+| Mnemonic | Opcode (octal) | Description              |
+| -------- | -------------- | ------------------------ |
+| SRC      | 031            | Shift Register by Count  |
+| RRC      | 032            | Rotate Register by Count |
 
 ### I/O
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| IN  | 061 | Input Character to Register |
-| OUT | 062 | Output Character from Register |
-| CHK | 063 | Check Device Status |
+| Mnemonic | Opcode (octal) | Description                    |
+| -------- | -------------- | ------------------------------ |
+| IN       | 061            | Input Character to Register    |
+| OUT      | 062            | Output Character from Register |
+| CHK      | 063            | Check Device Status            |
 
 ### Miscellaneous
 
-| Mnemonic | Opcode (octal) | Description |
-|---|---|---|
-| HLT  | 000 | Halt execution |
-| TRAP | 030 | Software trap |
+| Mnemonic | Opcode (octal) | Description    |
+| -------- | -------------- | -------------- |
+| HLT      | 000            | Halt execution |
+| TRAP     | 030            | Software trap  |
 
 ---
 
 ## Addressing Modes
 
-| Mode | Format | Effective Address |
-|---|---|---|
-| Direct | `r, 0, addr` | `EA = addr` |
-| Indexed | `r, ix, addr` | `EA = addr + c(IXix)` |
-| Indirect | `r, 0, addr, 1` | `EA = c(addr)` |
+| Mode             | Format           | Effective Address        |
+| ---------------- | ---------------- | ------------------------ |
+| Direct           | `r, 0, addr`     | `EA = addr`              |
+| Indexed          | `r, ix, addr`    | `EA = addr + c(IXix)`    |
+| Indirect         | `r, 0, addr, 1`  | `EA = c(addr)`           |
 | Indexed+Indirect | `r, ix, addr, 1` | `EA = c(addr + c(IXix))` |
 
 All addresses in source files are **decimal**; the assembler converts them to octal encoding. All register displays in the simulator show values in **octal**.
