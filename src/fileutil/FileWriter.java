@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.function.Predicate;
 
 public class FileWriter {
-    public static void writeListingFile(List<Instruction> instructions, String programName) {
+    public static Path writeListingFile(List<Instruction> instructions, String programName) {
         Path path = Path.of("output/" + programName + ".lst");
 
         try {
@@ -23,9 +23,11 @@ public class FileWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return path;
     }
 
-    public static void writeLoadFile(List<Instruction> instructions, String programName) {
+    public static Path writeLoadFile(List<Instruction> instructions, String programName) {
         Path path = Path.of("output/" + programName + ".load");
 
         try {
@@ -39,9 +41,12 @@ public class FileWriter {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        return path;
     }
 
-    public static String getBaseFilename(String filename) {
+    public static String getBaseFilename(Path path) {
+        String filename = path.getFileName().toString();
         return filename.substring(0, filename.lastIndexOf('.'));
     }
 }

@@ -6,9 +6,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 public class FileReader {
-    public static List<String> readFile(String filename) {
-        Path path = Path.of("input/" + filename);
-
+    public static List<String> readFile(Path path) {
         List<String> lines = null;
         try {
             lines = Files.readAllLines(path);

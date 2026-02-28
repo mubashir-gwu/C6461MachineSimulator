@@ -1,6 +1,10 @@
 package ui;
 
+import encoder.Encoder;
 import encoder.EncoderStringUtil;
+import fileutil.FileReader;
+import fileutil.FileWriter;
+import instruction.Instruction;
 import memory.Memory;
 import memory.Register;
 import memory.RegisterManager;
@@ -10,7 +14,10 @@ import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
+import java.io.File;
+import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class UserInterface extends JFrame {
@@ -19,7 +26,7 @@ public class UserInterface extends JFrame {
     private JTextField binaryOutputTextField;
     private String octalInputValue = "";
     private final Map<Register, JTextField> registerTextFieldMap = new HashMap<>();
-    private String programFilePath = "";
+    private Path programFilePath;
 
     private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
     private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
@@ -74,14 +81,16 @@ public class UserInterface extends JFrame {
 
         JButton button = new JButton("Browse");
         button.addActionListener(e -> {
-            JFileChooser fileChooser = new JFileChooser();
+            // Open a file chooser dialog to select a file in the current directory.
+            JFileChooser fileChooser = new JFileChooser(new File("."));
+
             int returnVal = fileChooser.showOpenDialog(this);
 
             if (returnVal == JFileChooser.APPROVE_OPTION) {
-                String filePath = fileChooser.getSelectedFile().getAbsolutePath();
-                textField.setText(filePath);
-                programFilePath = filePath;
-                outputManager.writeMessage("Loaded program from " + filePath);
+                File selectedFile = fileChooser.getSelectedFile();
+                textField.setText(selectedFile.getAbsolutePath());
+                programFilePath = selectedFile.toPath();
+                outputManager.writeMessage("Loaded program from " + selectedFile.getAbsolutePath());
             }
         });
 
@@ -227,7 +236,21 @@ public class UserInterface extends JFrame {
 
         JButton iplButton = new JButton("IPL");
         iplButton.addActionListener(e -> {
-            System.out.println("TODO");
+            List<String> programLines = FileReader.readFile(programFilePath);
+            if (programLines == null) {
+                outputManager.writeError("Could not read program file.");
+                return;
+            }
+
+            List<Instruction> instructions = Encoder.encode(programLines);
+
+            final String programName = FileWriter.getBaseFilename(programFilePath);
+
+            FileWriter.writeListingFile(instructions, programName);
+            Path loadFilePath = FileWriter.writeLoadFile(instructions, programName);
+
+            memory.loadProgramToMemory(loadFilePath);
+            outputManager.writeMessage("Loaded program " + programName + " into memory.");
         });
         iplButton.setBackground(Color.RED);
         iplButton.setForeground(Color.WHITE);
