@@ -173,8 +173,9 @@ public class UserInterface extends JFrame {
             registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)));
             outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue)) + " from address " + OutputManager.getPaddedOctalValue(marValue));
 
-            // Increment the MAR register by 1.
+            // Increment the MAR register by 1 and display the value at the new address.
             registerTextFieldMap.get(Register.MAR).setText(OutputManager.getPaddedOctalValue(marValue + 1));
+            registerTextFieldMap.get(Register.MBR).setText(OutputManager.getPaddedOctalValue(cpu.getMemory().getMemoryAt(marValue + 1)));
         });
 
         JButton storeButton = new JButton("Store");
