@@ -65,10 +65,10 @@ public class UserInterface extends JFrame {
     private JButton haltButton;
 
     /** Monospace font used for register value display fields. */
-    private final Font monospaceFont = new Font("Consolas", Font.PLAIN, 14);
+    private final Font monospaceFont = new Font(Font.MONOSPACED, Font.PLAIN, 14);
 
     /** Bold monospace font used for register label and binary output display fields. */
-    private final Font monospaceBoldFont = new Font("Consolas", Font.BOLD, 14);
+    private final Font monospaceBoldFont = new Font(Font.MONOSPACED, Font.BOLD, 14);
 
     /**
      * Parses an octal string and stores the resulting integer value into the specified register.
