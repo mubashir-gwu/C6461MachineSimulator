@@ -674,6 +674,20 @@ public class UserInterface extends JFrame {
                 }
                 try {
                     final int octalValue = Integer.parseInt(octalInputValue, 8);
+
+                    // PC and MAR are 12-bit registers, while the rest are 16 bits. So, perform appropriate range check.
+                    final int bits;
+                    if (register == Register.PC || register == Register.MAR) {
+                        bits = 12;
+                    } else {
+                        bits = 16;
+                    }
+
+                    if (octalValue > Math.pow(2, bits) - 1) {
+                        outputManager.writeError("Value " + octalValue + " (octal: " + Integer.toOctalString(octalValue) + ")" + " is out of range for the " + bits + "-bit register " + register + ".");
+                        return;
+                    }
+
                     loadOctalValueIntoRegister(register, octalInputValue);
                     outputManager.writeMessage("Loaded value " + OutputManager.getPaddedOctalValue(octalValue) + " into register " + register);
 
