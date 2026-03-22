@@ -8,6 +8,7 @@ import fileutil.FileWriter;
 import instruction.Instruction;
 import memory.Register;
 import outputmanager.OutputManager;
+import trace.TraceLogger;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -63,6 +64,9 @@ public class UserInterface extends JFrame {
 
     /** Halt button reference kept as a field so it can be enabled/disabled after halt. */
     private JButton haltButton;
+
+    /** Checkbox to enable/disable trace logging to file. */
+    private JCheckBox traceCheckbox;
 
     /** Monospace font used for register value display fields. */
     private final Font monospaceFont = new Font(Font.MONOSPACED, Font.PLAIN, 14);
@@ -154,9 +158,25 @@ public class UserInterface extends JFrame {
             }
         });
 
+        traceCheckbox = new JCheckBox("Enable Trace Logging");
+        traceCheckbox.setBackground(mainPanel.getBackground());
+        traceCheckbox.addActionListener(e -> {
+            TraceLogger.getInstance().setEnabled(traceCheckbox.isSelected());
+            if (traceCheckbox.isSelected()) {
+                outputManager.writeMessage("Trace logging enabled.");
+            } else {
+                outputManager.writeMessage("Trace logging disabled.");
+            }
+        });
+
+        JPanel eastPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+        eastPanel.setBackground(mainPanel.getBackground());
+        eastPanel.add(traceCheckbox);
+        eastPanel.add(button);
+
         mainPanel.add(label, BorderLayout.WEST);
         mainPanel.add(textField, BorderLayout.CENTER);
-        mainPanel.add(button, BorderLayout.EAST);
+        mainPanel.add(eastPanel, BorderLayout.EAST);
         mainPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, mainPanel.getPreferredSize().height));
         return mainPanel;
     }
@@ -374,6 +394,7 @@ public class UserInterface extends JFrame {
         runButton.addActionListener(e -> {
             cpu.executeAllInstructions();
             syncUIWithCPU();
+            TraceLogger.getInstance().close();
 
             outputManager.writeMessage("Execution halted.");
         });
@@ -384,6 +405,7 @@ public class UserInterface extends JFrame {
             syncUIWithCPU();
 
             if (cpu.isHalted()) {
+                TraceLogger.getInstance().close();
                 outputManager.writeMessage("Execution halted.");
             }
         });
@@ -392,6 +414,7 @@ public class UserInterface extends JFrame {
         haltButton.addActionListener(e -> {
             cpu.setHalted(true);
             syncUIWithCPU();
+            TraceLogger.getInstance().close();
             outputManager.writeMessage("Execution halted by user.");
         });
 
@@ -415,6 +438,14 @@ public class UserInterface extends JFrame {
 
             FileWriter.writeListingFile(instructions, programName);
             Path loadFilePath = FileWriter.writeLoadFile(instructions, programName);
+
+            // Close any existing trace file and open a new one if trace logging is enabled.
+            TraceLogger traceLogger = TraceLogger.getInstance();
+            traceLogger.close();
+            if (traceCheckbox.isSelected()) {
+                traceLogger.setEnabled(true);
+                traceLogger.open();
+            }
 
             // Reset the state for each IPL so previous runs do not affect the new program.
             this.cpu = new CPU();

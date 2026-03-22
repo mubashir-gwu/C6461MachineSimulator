@@ -8,6 +8,8 @@ import opcode.OpcodeLookupTable;
 import opcode.OpcodeType;
 import outputmanager.OutputManager;
 
+import trace.TraceLogger;
+
 import java.nio.file.Path;
 import java.util.List;
 
@@ -150,6 +152,7 @@ public class CPU {
      * current memory access and instruction word.
      */
     public void executeNextInstruction() {
+        final TraceLogger trace = TraceLogger.getInstance();
         final int value;
 
         try {
@@ -164,9 +167,13 @@ public class CPU {
         final OpcodeType opcodeType = OpcodeLookupTable.getOpcodeType(opcode);
 
         if (opcodeType == null) {
+            trace.logFault(0b0100, "Illegal opcode " + Integer.toOctalString(opcode) + " at address " + Integer.toOctalString(programCounter));
             outputManager.writeError("Invalid mnemonic encountered at address: " + Integer.toOctalString(programCounter));
             return;
         }
+
+        // Log the fetch phase.
+        trace.logFetch(programCounter, value);
 
         // Update the register values to reflect the current fetch.
         registerManager.loadRegister(Register.MAR, programCounter);
@@ -205,6 +212,10 @@ public class CPU {
         }
 
         registerManager.loadRegister(Register.PC, programCounter);
+
+        // Log full register state after each instruction.
+        trace.logRegisterState(registerManager);
+        trace.incrementStep();
     }
 
     /**
@@ -229,6 +240,7 @@ public class CPU {
      * @param instructionValue the raw 16-bit instruction word
      */
     public void executeLoadStoreInstruction(int instructionValue) {
+        final TraceLogger trace = TraceLogger.getInstance();
         final int opcode  = instructionValue >> 10;
         final int r       = (instructionValue >> 8) & 0b11;   // GPR number (bits 9:8)
         final int ix      = (instructionValue >> 6) & 0b11;   // Index register number (bits 7:6)
@@ -236,6 +248,9 @@ public class CPU {
         final int address = instructionValue & 0b11111;        // Address field (bits 4:0)
 
         final String opcodeMnemonic = OpcodeLookupTable.getMnemonic(opcode);
+
+        // Log decode phase.
+        trace.logDecode(opcodeMnemonic, opcode, r, ix, i, address);
 
         Register selectedIndexRegister = switch (ix) {
             case 1 -> Register.IX1;
@@ -262,12 +277,18 @@ public class CPU {
         if (i == 1) {
             // Indirect memory addressing: replace EA with the word stored at EA.
             try {
+                int indirectAddr = ea;
                 ea = memory.getMemoryAt(ea);
+                trace.logMemoryAccess("READ", indirectAddr, ea);
             } catch (IndexOutOfBoundsException e) {
                 outputManager.writeError(e.getMessage());
                 return;
             }
         }
+
+        // Log EA computation.
+        String eaDesc = (i == 1 ? "indirect" : "direct") + (ix > 0 && !opcodeMnemonic.equals("LDX") && !opcodeMnemonic.equals("STX") ? ", indexed by IX" + ix : ", no indexing");
+        trace.logEA(ea, eaDesc);
 
         registerManager.loadRegister(Register.MAR, ea);
 
@@ -282,22 +303,30 @@ public class CPU {
                     return;
                 }
 
+                trace.logMemoryAccess("READ", ea, value);
+                trace.logExecute("LDR: R" + r + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
+
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(selectedGeneralRegister, value);
                 break;
             case "STR":
                 // Store register R into memory at EA.
-                registerManager.loadRegister(Register.MBR, registerManager.getRegisterValue(selectedGeneralRegister));
+                int strValue = registerManager.getRegisterValue(selectedGeneralRegister);
+                registerManager.loadRegister(Register.MBR, strValue);
                 try {
-                    memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedGeneralRegister));
+                    memory.setMemoryAt(ea, strValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return;
                 }
+
+                trace.logMemoryAccess("WRITE", ea, strValue);
+                trace.logExecute("STR: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- R" + r + " = " + strValue + "(oct:" + Integer.toOctalString(strValue) + ")");
                 break;
             case "LDA":
                 // Load the effective address itself into register R (not the value at EA).
                 registerManager.loadRegister(selectedGeneralRegister, ea);
+                trace.logExecute("LDA: R" + r + " <- EA = " + ea + "(oct:" + Integer.toOctalString(ea) + ")");
                 break;
             case "LDX":
                 // Load index register IX from memory at EA.
@@ -308,18 +337,25 @@ public class CPU {
                     return;
                 }
 
+                trace.logMemoryAccess("READ", ea, value);
+                trace.logExecute("LDX: IX" + ix + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
+
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(selectedIndexRegister, value);
                 break;
             case "STX":
                 // Store index register IX into memory at EA.
-                registerManager.loadRegister(Register.MBR, registerManager.getRegisterValue(selectedIndexRegister));
+                int stxValue = registerManager.getRegisterValue(selectedIndexRegister);
+                registerManager.loadRegister(Register.MBR, stxValue);
                 try {
-                    memory.setMemoryAt(ea, registerManager.getRegisterValue(selectedIndexRegister));
+                    memory.setMemoryAt(ea, stxValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return;
                 }
+
+                trace.logMemoryAccess("WRITE", ea, stxValue);
+                trace.logExecute("STX: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- IX" + ix + " = " + stxValue + "(oct:" + Integer.toOctalString(stxValue) + ")");
                 break;
         }
     }
@@ -387,11 +423,15 @@ public class CPU {
      * @param instructionValue the raw 16-bit instruction word
      */
     public void executeMiscInstruction(int instructionValue) {
+        final TraceLogger trace = TraceLogger.getInstance();
         final int opcode = instructionValue >> 10;
         final String opcodeMnemonic = OpcodeLookupTable.getMnemonic(opcode);
 
+        trace.log("DECODE  | Mnemonic=" + opcodeMnemonic);
+
         if (opcodeMnemonic.equals("HLT")) {
             halted = true;
+            trace.logHalt();
         }
     }
 
