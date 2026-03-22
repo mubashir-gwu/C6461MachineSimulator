@@ -43,4 +43,22 @@ public class RegisterManager {
     public int getRegisterValue(Register register) {
         return registerData.get(register);
     }
+
+    /**
+     * Sets or clears an individual bit in the Condition Code (CC) register.
+     *
+     * <p>Bit indices: 0=OVERFLOW, 1=UNDERFLOW, 2=DIVZERO, 3=EQUALORNOT.
+     *
+     * @param bitIndex the bit position to modify (0–3)
+     * @param value    {@code true} to set the bit to 1, {@code false} to clear it to 0
+     */
+    public void setConditionCode(int bitIndex, boolean value) {
+        int cc = registerData.get(Register.CC);
+        if (value) {
+            cc |= (1 << bitIndex);
+        } else {
+            cc &= ~(1 << bitIndex);
+        }
+        registerData.put(Register.CC, cc & 0xF);
+    }
 }

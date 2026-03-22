@@ -236,7 +236,13 @@ public class UserInterface extends JFrame {
      */
     private void syncUIWithCPU() {
         for (Register register : Register.values()) {
-            registerTextFieldMap.get(register).setText(OutputManager.getPaddedOctalValue(cpu.getRegisterManager().getRegisterValue(register)));
+            int value = cpu.getRegisterManager().getRegisterValue(register);
+            if (register == Register.CC || register == Register.MFR) {
+                // Display 4-bit registers as 4-digit binary.
+                registerTextFieldMap.get(register).setText(String.format("%4s", Integer.toBinaryString(value & 0xF)).replace(' ', '0'));
+            } else {
+                registerTextFieldMap.get(register).setText(OutputManager.getPaddedOctalValue(value));
+            }
         }
 
         stepButton.setEnabled(!cpu.isHalted());
@@ -654,6 +660,8 @@ public class UserInterface extends JFrame {
         mainPanel.add(getLabelledTextField(Register.MAR));
         mainPanel.add(getLabelledTextField(Register.MBR));
         mainPanel.add(getLabelledTextField(Register.IR, false));   // IR is read-only; no Load button.
+        mainPanel.add(getLabelledTextField(Register.CC, false));  // CC is read-only; no Load button.
+        mainPanel.add(getLabelledTextField(Register.MFR, false)); // MFR is read-only; no Load button.
 
         return mainPanel;
     }

@@ -211,6 +211,9 @@ public class TraceLogger {
                 regs.getRegisterValue(Register.MAR), padOctal(regs.getRegisterValue(Register.MAR)),
                 regs.getRegisterValue(Register.MBR), padOctal(regs.getRegisterValue(Register.MBR)),
                 padOctal(regs.getRegisterValue(Register.IR)));
+        writer.printf("                    | CC=%s MFR=%s%n",
+                padBinary4(regs.getRegisterValue(Register.CC)),
+                padBinary4(regs.getRegisterValue(Register.MFR)));
     }
 
     /**
@@ -300,6 +303,13 @@ public class TraceLogger {
     /**
      * Returns a zero-padded 6-digit octal string for the given value.
      */
+    /**
+     * Returns a zero-padded 4-digit binary string for the given value (masked to 4 bits).
+     */
+    private String padBinary4(int value) {
+        return String.format("%4s", Integer.toBinaryString(value & 0xF)).replace(' ', '0');
+    }
+
     private String padOctal(int value) {
         StringBuilder sb = new StringBuilder(Integer.toOctalString(value));
         while (sb.length() < 6) {

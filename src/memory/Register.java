@@ -32,4 +32,9 @@ public enum Register {
     MBR,
     /** Instruction Register. Holds the full 16-bit word of the currently executing instruction. */
     IR,
+
+    /** Condition Code register. 4 bits: cc(0)=OVERFLOW, cc(1)=UNDERFLOW, cc(2)=DIVZERO, cc(3)=EQUALORNOT. */
+    CC,
+    /** Machine Fault Register. 4 bits: 0001=illegal reserved addr, 0010=illegal TRAP, 0100=illegal opcode, 1000=addr beyond 2048. */
+    MFR,
 }
