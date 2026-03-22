@@ -208,14 +208,14 @@ public class CPU {
             outputManager.writeError(e.getMessage());
             return;
         }
+        if (halted) return; // Fault raised during instruction fetch.
 
         // Extract the opcode from bits [15:10] of the instruction word.
         final int opcode = value >> 10;
         final OpcodeType opcodeType = OpcodeLookupTable.getOpcodeType(opcode);
 
         if (opcodeType == null) {
-            trace.logFault(0b0100, "Illegal opcode " + Integer.toOctalString(opcode) + " at address " + Integer.toOctalString(programCounter));
-            outputManager.writeError("Invalid mnemonic encountered at address: " + Integer.toOctalString(programCounter));
+            raiseFault(0b0100, "Illegal opcode " + Integer.toOctalString(opcode) + " at address " + Integer.toOctalString(programCounter));
             return;
         }
 
@@ -304,6 +304,7 @@ public class CPU {
                 outputManager.writeError(e.getMessage());
                 return -1;
             }
+            if (halted) return -1; // Fault raised during indirect addressing.
         }
 
         String eaDesc = (i == 1 ? "indirect" : "direct") +
@@ -320,6 +321,20 @@ public class CPU {
     }
 
     /**
+     * Raises a machine fault: sets the MFR register, logs the fault, displays an error, and halts.
+     *
+     * @param mfrCode     the 4-bit MFR code (e.g. 0b0001, 0b0100, 0b1000)
+     * @param description a human-readable description of the fault
+     */
+    private void raiseFault(int mfrCode, String description) {
+        final TraceLogger trace = TraceLogger.getInstance();
+        registerManager.loadRegister(Register.MFR, mfrCode & 0xF);
+        trace.logFault(mfrCode, description);
+        outputManager.writeError("FAULT (MFR=" + String.format("%4s", Integer.toBinaryString(mfrCode & 0xF)).replace(' ', '0') + "): " + description);
+        halted = true;
+    }
+
+    /**
      * Reads a word from memory through the cache.
      *
      * <p>On a cache hit the word is returned directly from the cache (no memory access).
@@ -332,6 +347,16 @@ public class CPU {
      */
     private int readMemory(int address) throws IndexOutOfBoundsException {
         final TraceLogger trace = TraceLogger.getInstance();
+
+        // Machine fault checks.
+        if (address >= 2048 || address < 0) {
+            raiseFault(0b1000, "Illegal memory address beyond 2048: " + address);
+            return 0;
+        }
+        if (address >= 0 && address <= 5) {
+            raiseFault(0b0001, "Illegal memory address to reserved location: " + address);
+            return 0;
+        }
 
         // Check cache first.
         int cached = cache.lookup(address);
@@ -362,6 +387,16 @@ public class CPU {
      */
     private void writeMemory(int address, int value) throws IndexOutOfBoundsException {
         final TraceLogger trace = TraceLogger.getInstance();
+
+        // Machine fault checks.
+        if (address >= 2048 || address < 0) {
+            raiseFault(0b1000, "Illegal memory address beyond 2048: " + address);
+            return;
+        }
+        if (address >= 0 && address <= 5) {
+            raiseFault(0b0001, "Illegal memory address to reserved location: " + address);
+            return;
+        }
 
         // Always write to main memory.
         memory.setMemoryAt(address, value);
@@ -427,6 +462,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 trace.logExecute("LDR: R" + r + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(gpr, value);
@@ -440,6 +476,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 trace.logExecute("STR: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- R" + r + " = " + strValue + "(oct:" + Integer.toOctalString(strValue) + ")");
                 break;
             case "LDA":
@@ -453,6 +490,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 trace.logExecute("LDX: IX" + ix + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(ixr, value);
@@ -466,6 +504,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 trace.logExecute("STX: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- IX" + ix + " = " + stxValue + "(oct:" + Integer.toOctalString(stxValue) + ")");
                 break;
         }
@@ -629,6 +668,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 int result = toSigned16(regVal) + toSigned16(memVal);
                 if (result > 32767) registerManager.setConditionCode(0, true);   // OVERFLOW
                 if (result < -32768) registerManager.setConditionCode(1, true);  // UNDERFLOW
@@ -649,6 +689,7 @@ public class CPU {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
+                if (halted) return false;
                 int result = toSigned16(regVal) - toSigned16(memVal);
                 if (result > 32767) registerManager.setConditionCode(0, true);   // OVERFLOW
                 if (result < -32768) registerManager.setConditionCode(1, true);  // UNDERFLOW
