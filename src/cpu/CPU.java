@@ -12,6 +12,8 @@ import trace.TraceLogger;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * Simulates the C6461 CPU: fetches, decodes, and executes machine instructions.
@@ -44,6 +46,12 @@ public class CPU {
     /** Set to {@code true} when a HLT instruction is encountered or the user clicks Halt. */
     private boolean halted = false;
 
+    /** Provides a single character (as an integer) from the console keyboard for IN instructions. */
+    private Supplier<Integer> consoleInputProvider;
+
+    /** Accepts a single character (as an integer) for the console printer for OUT instructions. */
+    private Consumer<Integer> consolePrinterConsumer;
+
     /**
      * Constructs a new CPU with freshly initialised memory and registers.
      */
@@ -59,6 +67,24 @@ public class CPU {
      */
     public void setOutputManager(OutputManager outputManager) {
         this.outputManager = outputManager;
+    }
+
+    /**
+     * Sets the console input provider used by IN instructions (DEVID 0) to read one character.
+     *
+     * @param provider a supplier that returns the next character as an integer, or -1 if no input
+     */
+    public void setConsoleInputProvider(Supplier<Integer> provider) {
+        this.consoleInputProvider = provider;
+    }
+
+    /**
+     * Sets the console printer consumer used by OUT instructions (DEVID 1) to output one character.
+     *
+     * @param consumer a consumer that accepts a character value (integer) to display
+     */
+    public void setConsolePrinterConsumer(Consumer<Integer> consumer) {
+        this.consolePrinterConsumer = consumer;
     }
 
     /**
@@ -850,13 +876,87 @@ public class CPU {
     }
 
     /**
-     * Executes an I/O instruction (IN, OUT, CHK).
-     * Not yet implemented for Part I.
+     * Executes an I/O instruction (IN, OUT).
+     *
+     * <p>Format: OPCODE(6)|R(2)|UNUSED(3)|DEVID(5).
+     * <ul>
+     *   <li>DEVID 0 = Console Keyboard (input)</li>
+     *   <li>DEVID 1 = Console Printer (output)</li>
+     *   <li>DEVID 2 = Card Reader (file-based input, not yet implemented)</li>
+     * </ul>
      *
      * @param instructionValue the raw 16-bit instruction word
      * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
     public boolean executeIOInstruction(int instructionValue) {
+        final TraceLogger trace = TraceLogger.getInstance();
+        final int opcode = instructionValue >> 10;
+        final int r      = (instructionValue >> 8) & 0b11;
+        final int devid  = instructionValue & 0b11111;
+
+        final String mnemonic = OpcodeLookupTable.getMnemonic(opcode);
+        trace.logDecodeIO(mnemonic, opcode, r, devid);
+
+        Register gpr = getGPR(r);
+
+        switch (mnemonic) {
+            case "IN": {
+                // Read one character from the specified device into register r.
+                if (devid == 0) {
+                    // Console Keyboard
+                    if (consoleInputProvider == null) {
+                        outputManager.writeError("IN: No console input provider connected.");
+                        trace.logExecute("IN: ERROR — no console input provider");
+                        return false;
+                    }
+                    int charVal = consoleInputProvider.get();
+                    if (charVal < 0) {
+                        outputManager.writeError("IN: No input available from keyboard.");
+                        trace.logExecute("IN: ERROR — no input available from keyboard");
+                        return false;
+                    }
+                    registerManager.loadRegister(gpr, charVal & 0xFFFF);
+                    trace.logIO("IN", devid, charVal);
+                    trace.logExecute("IN: R" + r + " <- keyboard char " + charVal +
+                            " ('" + (char) charVal + "')");
+                } else if (devid == 2) {
+                    // Card Reader — not yet implemented.
+                    outputManager.writeError("IN: Card reader (DEVID 2) not yet implemented.");
+                    trace.logExecute("IN: Card reader (DEVID 2) not yet implemented");
+                } else {
+                    outputManager.writeError("IN: Unknown device ID " + devid);
+                    trace.logExecute("IN: ERROR — unknown DEVID " + devid);
+                }
+                break;
+            }
+
+            case "OUT": {
+                // Output the value in register r to the specified device.
+                int regVal = registerManager.getRegisterValue(gpr);
+                if (devid == 1) {
+                    // Console Printer
+                    if (consolePrinterConsumer == null) {
+                        outputManager.writeError("OUT: No console printer connected.");
+                        trace.logExecute("OUT: ERROR — no console printer consumer");
+                        return false;
+                    }
+                    consolePrinterConsumer.accept(regVal);
+                    trace.logIO("OUT", devid, regVal);
+                    trace.logExecute("OUT: printer <- R" + r + " = " + regVal +
+                            " ('" + (char) regVal + "')");
+                } else {
+                    outputManager.writeError("OUT: Unknown device ID " + devid);
+                    trace.logExecute("OUT: ERROR — unknown DEVID " + devid);
+                }
+                break;
+            }
+
+            case "CHK":
+                outputManager.writeError("CHK: Not implemented (Part III/IV).");
+                trace.logExecute("CHK: Not implemented");
+                break;
+        }
+
         return false;
     }
 

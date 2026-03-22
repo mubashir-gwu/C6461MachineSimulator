@@ -68,6 +68,12 @@ public class UserInterface extends JFrame {
     /** Checkbox to enable/disable trace logging to file. */
     private JCheckBox traceCheckbox;
 
+    /** Text field where the user types input for the IN instruction (Console Keyboard). */
+    private JTextField consoleKeyboardField;
+
+    /** Text area that displays output from the OUT instruction (Console Printer). */
+    private JTextArea consolePrinterArea;
+
     /** Monospace font used for register value display fields. */
     private final Font monospaceFont = new Font(Font.MONOSPACED, Font.PLAIN, 14);
 
@@ -119,6 +125,9 @@ public class UserInterface extends JFrame {
         root.add(executionPanels);
 
         setContentPane(root);
+
+        // Wire console I/O after all UI components are created.
+        wireConsoleIO();
     }
 
     /**
@@ -226,6 +235,41 @@ public class UserInterface extends JFrame {
         centerPanel.add(getButtonsPanel());
 
         return centerPanel;
+    }
+
+    /**
+     * Connects the CPU's I/O callbacks to the console keyboard and printer UI components.
+     *
+     * <p>The console input provider reads and consumes one character at a time from the
+     * keyboard text field. The console printer consumer appends characters to the printer area.
+     */
+    private void wireConsoleIO() {
+        // IN (DEVID 0): read and consume one character from the keyboard field.
+        // If the field is empty, prompt the user with a dialog.
+        cpu.setConsoleInputProvider(() -> {
+            String text = consoleKeyboardField.getText();
+            if (text == null || text.isEmpty()) {
+                // Prompt the user for input via a dialog.
+                String input = JOptionPane.showInputDialog(this,
+                        "Enter input for Console Keyboard:",
+                        "Console Keyboard (IN)", JOptionPane.QUESTION_MESSAGE);
+                if (input == null || input.isEmpty()) {
+                    return -1; // User cancelled or entered nothing.
+                }
+                // Place the input into the keyboard field so characters are consumed one at a time.
+                consoleKeyboardField.setText(input);
+                text = input;
+            }
+            int ch = text.charAt(0);
+            // Consume the character by removing it from the field.
+            consoleKeyboardField.setText(text.substring(1));
+            return ch;
+        });
+
+        // OUT (DEVID 1): append one character to the printer area.
+        cpu.setConsolePrinterConsumer(charVal -> {
+            consolePrinterArea.append(String.valueOf((char) (int) charVal));
+        });
     }
 
     /**
@@ -456,6 +500,11 @@ public class UserInterface extends JFrame {
             // Reset the state for each IPL so previous runs do not affect the new program.
             this.cpu = new CPU();
             cpu.setOutputManager(outputManager);
+            wireConsoleIO();
+
+            // Clear console I/O areas for the new program run.
+            consolePrinterArea.setText("");
+            consoleKeyboardField.setText("");
 
             int programStartAddress = cpu.loadProgramToMemory(loadFilePath);
             this.cpu.setProgramCounter(programStartAddress);
@@ -505,6 +554,7 @@ public class UserInterface extends JFrame {
         ));
         rightPanel.setBackground(Color.getHSBColor(0.8f, 0.1f, 0.9f));
 
+        // Messages/Errors output area.
         JPanel outputPanel = new JPanel();
         outputPanel.setLayout(new BoxLayout(outputPanel, BoxLayout.Y_AXIS));
         outputPanel.setBorder(BorderFactory.createCompoundBorder(
@@ -516,13 +566,47 @@ public class UserInterface extends JFrame {
         outputTextArea.setEditable(false);
         outputTextArea.setLineWrap(true);
         outputTextArea.setWrapStyleWord(true);
-        outputPanel.add(outputTextArea);
+        outputPanel.add(new JScrollPane(outputTextArea));
 
         // Initialize the OutputManager with the `outputTextArea` so that it can write messages to it.
         outputManager = new OutputManager(outputTextArea);
         cpu.setOutputManager(outputManager);
 
         rightPanel.add(outputPanel);
+
+        // Console Keyboard input panel (for IN instruction, DEVID 0).
+        JPanel keyboardPanel = new JPanel();
+        keyboardPanel.setLayout(new BoxLayout(keyboardPanel, BoxLayout.Y_AXIS));
+        keyboardPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Console Keyboard (IN)"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        consoleKeyboardField = new JTextField(20);
+        consoleKeyboardField.setFont(monospaceFont);
+        keyboardPanel.add(consoleKeyboardField);
+        keyboardPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, keyboardPanel.getPreferredSize().height));
+
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(keyboardPanel);
+
+        // Console Printer output panel (for OUT instruction, DEVID 1).
+        JPanel printerPanel = new JPanel();
+        printerPanel.setLayout(new BoxLayout(printerPanel, BoxLayout.Y_AXIS));
+        printerPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Console Printer (OUT)"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        consolePrinterArea = new JTextArea(3, 20);
+        consolePrinterArea.setEditable(false);
+        consolePrinterArea.setFont(monospaceFont);
+        consolePrinterArea.setLineWrap(true);
+        consolePrinterArea.setWrapStyleWord(true);
+        printerPanel.add(new JScrollPane(consolePrinterArea));
+
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(printerPanel);
 
         return rightPanel;
     }
