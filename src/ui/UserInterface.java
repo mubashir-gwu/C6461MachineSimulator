@@ -658,6 +658,7 @@ public class UserInterface extends JFrame {
         statusRow.add(Box.createHorizontalStrut(10));
         statusRow.add(cacheFifoLabel);
 
+        statusRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         statusRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, statusRow.getPreferredSize().height));
         cachePanel.add(statusRow);
         cachePanel.add(Box.createVerticalStrut(5));
@@ -665,6 +666,7 @@ public class UserInterface extends JFrame {
         // Header row.
         JLabel header = new JLabel(" Ln | V |  Tag   |  Data  ");
         header.setFont(monospaceBoldFont);
+        header.setAlignmentX(Component.LEFT_ALIGNMENT);
         header.setMaximumSize(new Dimension(Integer.MAX_VALUE, header.getPreferredSize().height));
         cachePanel.add(header);
 
@@ -674,6 +676,7 @@ public class UserInterface extends JFrame {
             JLabel lineLabel = new JLabel(formatCacheLine(i, false, 0, 0, false));
             lineLabel.setFont(monospaceFont);
             lineLabel.setOpaque(true);
+            lineLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
             lineLabel.setBackground(cachePanel.getBackground());
             cacheLineLabels[i] = lineLabel;
             cachePanel.add(lineLabel);
