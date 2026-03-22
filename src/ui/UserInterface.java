@@ -268,6 +268,8 @@ public class UserInterface extends JFrame {
                     return -1; // User cancelled or entered nothing.
                 }
                 // Place the input into the keyboard field so characters are consumed one at a time.
+                // Append CR (13) so programs that read until Enter (e.g., ReadNum) get a terminator.
+                input = input + "\r";
                 consoleKeyboardField.setText(input);
                 text = input;
             }
