@@ -1,6 +1,7 @@
 package cpu;
 
 import fileutil.FileReader;
+import memory.Cache;
 import memory.Memory;
 import memory.Register;
 import memory.RegisterManager;
@@ -37,6 +38,9 @@ public class CPU {
     /** The machine's main memory (2048 words). */
     private final Memory memory;
 
+    /** Fully associative cache (16 lines, FIFO replacement) sitting between CPU and memory. */
+    private final Cache cache;
+
     /** Writes messages and errors to the simulator UI output panel. */
     private OutputManager outputManager;
 
@@ -57,6 +61,7 @@ public class CPU {
      */
     public CPU() {
         this.memory = new Memory();
+        this.cache = new Cache();
         this.registerManager = new RegisterManager();
     }
 
@@ -104,6 +109,15 @@ public class CPU {
      */
     public Memory getMemory() {
         return memory;
+    }
+
+    /**
+     * Returns the cache, allowing the UI to display cache contents.
+     *
+     * @return the {@link Cache} instance used by this CPU
+     */
+    public Cache getCache() {
+        return cache;
     }
 
     /**
@@ -189,7 +203,7 @@ public class CPU {
         final int value;
 
         try {
-            value = memory.getMemoryAt(programCounter);
+            value = readMemory(programCounter);
         } catch (IndexOutOfBoundsException e) {
             outputManager.writeError(e.getMessage());
             return;
@@ -285,8 +299,7 @@ public class CPU {
         if (i == 1) {
             try {
                 int indirectAddr = ea;
-                ea = memory.getMemoryAt(ea);
-                trace.logMemoryAccess("READ", indirectAddr, ea);
+                ea = readMemory(ea);
             } catch (IndexOutOfBoundsException e) {
                 outputManager.writeError(e.getMessage());
                 return -1;
@@ -304,6 +317,61 @@ public class CPU {
      */
     private int toSigned16(int value) {
         return (short) (value & 0xFFFF);
+    }
+
+    /**
+     * Reads a word from memory through the cache.
+     *
+     * <p>On a cache hit the word is returned directly from the cache (no memory access).
+     * On a miss the word is read from main memory and inserted into the cache via FIFO.
+     * Both hits and misses are logged through {@link TraceLogger}.
+     *
+     * @param address the memory address to read
+     * @return the 16-bit word at {@code address}
+     * @throws IndexOutOfBoundsException if {@code address} is out of the memory range
+     */
+    private int readMemory(int address) throws IndexOutOfBoundsException {
+        final TraceLogger trace = TraceLogger.getInstance();
+
+        // Check cache first.
+        int cached = cache.lookup(address);
+        if (cached != -1) {
+            trace.logCacheEvent("HIT  line=" + cache.getLastAccessedLine(), address);
+            trace.logMemoryAccess("READ", address, cached);
+            return cached;
+        }
+
+        // Cache miss — read from main memory and insert into cache.
+        int value = memory.getMemoryAt(address);
+        int lineIndex = cache.insert(address, value);
+        trace.logCacheEvent("MISS -> loaded to line=" + lineIndex, address);
+        trace.logMemoryAccess("READ", address, value);
+        return value;
+    }
+
+    /**
+     * Writes a word to memory using a write-through policy.
+     *
+     * <p>The word is always written to main memory. If the address is already present
+     * in the cache, the cached copy is updated (write-through). If not cached, no
+     * cache insertion occurs (no write-allocate).
+     *
+     * @param address the memory address to write
+     * @param value   the 16-bit word to store
+     * @throws IndexOutOfBoundsException if {@code address} is out of the memory range
+     */
+    private void writeMemory(int address, int value) throws IndexOutOfBoundsException {
+        final TraceLogger trace = TraceLogger.getInstance();
+
+        // Always write to main memory.
+        memory.setMemoryAt(address, value);
+
+        // Write-through: update cache if address is present.
+        boolean updated = cache.writeThrough(address, value);
+        if (updated) {
+            trace.logCacheEvent("WRITE-THROUGH updated line=" + cache.getLastAccessedLine(), address);
+        }
+        trace.logMemoryAccess("WRITE", address, value);
     }
 
     // ── Instruction execution methods ────────────────────────────────────────────
@@ -354,12 +422,11 @@ public class CPU {
         switch (mnemonic) {
             case "LDR":
                 try {
-                    value = memory.getMemoryAt(ea);
+                    value = readMemory(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("READ", ea, value);
                 trace.logExecute("LDR: R" + r + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(gpr, value);
@@ -368,12 +435,11 @@ public class CPU {
                 int strValue = registerManager.getRegisterValue(gpr);
                 registerManager.loadRegister(Register.MBR, strValue);
                 try {
-                    memory.setMemoryAt(ea, strValue);
+                    writeMemory(ea, strValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("WRITE", ea, strValue);
                 trace.logExecute("STR: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- R" + r + " = " + strValue + "(oct:" + Integer.toOctalString(strValue) + ")");
                 break;
             case "LDA":
@@ -382,12 +448,11 @@ public class CPU {
                 break;
             case "LDX":
                 try {
-                    value = memory.getMemoryAt(ea);
+                    value = readMemory(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("READ", ea, value);
                 trace.logExecute("LDX: IX" + ix + " <- Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] = " + value + "(oct:" + Integer.toOctalString(value) + ")");
                 registerManager.loadRegister(Register.MBR, value);
                 registerManager.loadRegister(ixr, value);
@@ -396,12 +461,11 @@ public class CPU {
                 int stxValue = registerManager.getRegisterValue(ixr);
                 registerManager.loadRegister(Register.MBR, stxValue);
                 try {
-                    memory.setMemoryAt(ea, stxValue);
+                    writeMemory(ea, stxValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("WRITE", ea, stxValue);
                 trace.logExecute("STX: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- IX" + ix + " = " + stxValue + "(oct:" + Integer.toOctalString(stxValue) + ")");
                 break;
         }
@@ -560,12 +624,11 @@ public class CPU {
                 if (ea < 0) return false;
                 int memVal;
                 try {
-                    memVal = memory.getMemoryAt(ea);
+                    memVal = readMemory(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("READ", ea, memVal);
                 int result = toSigned16(regVal) + toSigned16(memVal);
                 if (result > 32767) registerManager.setConditionCode(0, true);   // OVERFLOW
                 if (result < -32768) registerManager.setConditionCode(1, true);  // UNDERFLOW
@@ -581,12 +644,11 @@ public class CPU {
                 if (ea < 0) return false;
                 int memVal;
                 try {
-                    memVal = memory.getMemoryAt(ea);
+                    memVal = readMemory(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
                     return false;
                 }
-                trace.logMemoryAccess("READ", ea, memVal);
                 int result = toSigned16(regVal) - toSigned16(memVal);
                 if (result > 32767) registerManager.setConditionCode(0, true);   // OVERFLOW
                 if (result < -32768) registerManager.setConditionCode(1, true);  // UNDERFLOW

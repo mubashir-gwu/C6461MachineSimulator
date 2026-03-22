@@ -6,6 +6,7 @@ import encoder.EncoderStringUtil;
 import fileutil.FileReader;
 import fileutil.FileWriter;
 import instruction.Instruction;
+import memory.Cache;
 import memory.Register;
 import outputmanager.OutputManager;
 import trace.TraceLogger;
@@ -74,6 +75,15 @@ public class UserInterface extends JFrame {
     /** Text area that displays output from the OUT instruction (Console Printer). */
     private JTextArea consolePrinterArea;
 
+    /** Labels displaying each of the 16 cache lines (Line# | Valid | Tag | Data). */
+    private JLabel[] cacheLineLabels;
+
+    /** Label showing whether the most recent cache access was a HIT or MISS. */
+    private JLabel cacheHitMissLabel;
+
+    /** Label showing the current FIFO replacement pointer position. */
+    private JLabel cacheFifoLabel;
+
     /** Monospace font used for register value display fields. */
     private final Font monospaceFont = new Font(Font.MONOSPACED, Font.PLAIN, 14);
 
@@ -101,7 +111,7 @@ public class UserInterface extends JFrame {
 
         setTitle("C6461 Machine Simulator");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);     // Exit the application when the window is closed.
-        setSize(1000, 700);
+        setSize(1300, 700);
         setLocationRelativeTo(null);                        // Center the window on the screen.
 
         JPanel root = new JPanel();
@@ -112,11 +122,12 @@ public class UserInterface extends JFrame {
         title.setAlignmentX(Component.CENTER_ALIGNMENT);
         title.setFont(new Font("Arial", Font.BOLD, 24));
 
-        JPanel executionPanels = new JPanel(new GridLayout(1, 3, 10, 10));
+        JPanel executionPanels = new JPanel(new GridLayout(1, 4, 10, 10));
 
         executionPanels.add(getLeftPanel());
         executionPanels.add(getCenterPanel());
         executionPanels.add(getRightPanel());
+        executionPanels.add(getCachePanel());
 
         root.add(title, BorderLayout.NORTH);
         root.add(Box.createVerticalStrut(10));
@@ -288,6 +299,9 @@ public class UserInterface extends JFrame {
                 registerTextFieldMap.get(register).setText(OutputManager.getPaddedOctalValue(value));
             }
         }
+
+        // Refresh cache display after every instruction.
+        refreshCacheDisplay();
 
         stepButton.setEnabled(!cpu.isHalted());
         runButton.setEnabled(!cpu.isHalted());
@@ -609,6 +623,125 @@ public class UserInterface extends JFrame {
         rightPanel.add(printerPanel);
 
         return rightPanel;
+    }
+
+    /**
+     * Builds the cache content panel showing all 16 cache lines, a HIT/MISS indicator,
+     * and the FIFO replacement pointer.
+     *
+     * <p>Each cache line is displayed as a single label row:
+     * {@code Line# | Valid | Tag (octal) | Data (octal)}.
+     * The most recently accessed line is highlighted with a bold font.
+     *
+     * @return the constructed cache panel
+     */
+    private JPanel getCachePanel() {
+        JPanel cachePanel = new JPanel();
+        cachePanel.setLayout(new BoxLayout(cachePanel, BoxLayout.Y_AXIS));
+        cachePanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Cache Content"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+        cachePanel.setBackground(Color.getHSBColor(0.1f, 0.1f, 0.9f));
+
+        // HIT/MISS indicator and FIFO pointer on the same row.
+        JPanel statusRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        statusRow.setBackground(cachePanel.getBackground());
+
+        cacheHitMissLabel = new JLabel("--");
+        cacheHitMissLabel.setFont(monospaceBoldFont);
+        statusRow.add(new JLabel("Last: "));
+        statusRow.add(cacheHitMissLabel);
+
+        cacheFifoLabel = new JLabel("FIFO -> 0");
+        cacheFifoLabel.setFont(monospaceFont);
+        statusRow.add(Box.createHorizontalStrut(10));
+        statusRow.add(cacheFifoLabel);
+
+        statusRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, statusRow.getPreferredSize().height));
+        cachePanel.add(statusRow);
+        cachePanel.add(Box.createVerticalStrut(5));
+
+        // Header row.
+        JLabel header = new JLabel(" Ln | V |  Tag   |  Data  ");
+        header.setFont(monospaceBoldFont);
+        header.setMaximumSize(new Dimension(Integer.MAX_VALUE, header.getPreferredSize().height));
+        cachePanel.add(header);
+
+        // 16 cache line rows.
+        cacheLineLabels = new JLabel[Cache.NUM_LINES];
+        for (int i = 0; i < Cache.NUM_LINES; i++) {
+            JLabel lineLabel = new JLabel(formatCacheLine(i, false, 0, 0, false));
+            lineLabel.setFont(monospaceFont);
+            lineLabel.setOpaque(true);
+            lineLabel.setBackground(cachePanel.getBackground());
+            cacheLineLabels[i] = lineLabel;
+            cachePanel.add(lineLabel);
+        }
+
+        cachePanel.add(Box.createVerticalGlue());
+        return cachePanel;
+    }
+
+    /**
+     * Formats a single cache line for display in the cache panel.
+     *
+     * @param index       the line index (0–15)
+     * @param valid       whether the line contains valid data
+     * @param tag         the memory address (tag) stored in this line
+     * @param data        the 16-bit data word
+     * @param highlighted whether this line should be visually highlighted
+     * @return the formatted string for this cache line
+     */
+    private String formatCacheLine(int index, boolean valid, int tag, int data, boolean highlighted) {
+        if (!valid) {
+            return String.format(" %2d | 0 | ------ | ------", index);
+        }
+        String tagOctal = OutputManager.getPaddedOctalValue(tag);
+        String dataOctal = OutputManager.getPaddedOctalValue(data);
+        String prefix = highlighted ? ">" : " ";
+        return String.format("%s%2d | 1 | %s | %s", prefix, index, tagOctal, dataOctal);
+    }
+
+    /**
+     * Refreshes the cache display panel to reflect the current cache state.
+     * Called from {@link #syncUIWithCPU()} after every instruction.
+     */
+    private void refreshCacheDisplay() {
+        Cache cache = cpu.getCache();
+        Cache.CacheLine[] lines = cache.getLines();
+        int lastAccessed = cache.getLastAccessedLine();
+
+        for (int i = 0; i < Cache.NUM_LINES; i++) {
+            boolean highlighted = (i == lastAccessed);
+            cacheLineLabels[i].setText(formatCacheLine(
+                    i, lines[i].isValid(), lines[i].getTag(), lines[i].getData(), highlighted));
+
+            if (highlighted) {
+                cacheLineLabels[i].setFont(monospaceBoldFont);
+                cacheLineLabels[i].setBackground(new Color(220, 235, 255));
+            } else {
+                cacheLineLabels[i].setFont(monospaceFont);
+                cacheLineLabels[i].setBackground(null);
+            }
+        }
+
+        // Update HIT/MISS indicator.
+        if (lastAccessed >= 0) {
+            if (cache.isLastHit()) {
+                cacheHitMissLabel.setText("CACHE HIT");
+                cacheHitMissLabel.setForeground(new Color(0, 128, 0));
+            } else {
+                cacheHitMissLabel.setText("CACHE MISS");
+                cacheHitMissLabel.setForeground(Color.RED);
+            }
+        } else {
+            cacheHitMissLabel.setText("--");
+            cacheHitMissLabel.setForeground(Color.BLACK);
+        }
+
+        // Update FIFO pointer display.
+        cacheFifoLabel.setText("FIFO -> " + cache.getFifoPointer());
     }
 
     /**
