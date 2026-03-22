@@ -110,7 +110,8 @@ public class InstructionEncoder {
         if (instruction.getMnemonic().equals("LDX")
                 || instruction.getMnemonic().equals("STX")
                 || instruction.getMnemonic().equals("JMA")
-                || instruction.getMnemonic().equals("JSR")) {
+                || instruction.getMnemonic().equals("JSR")
+                || instruction.getMnemonic().equals("RFS")) {
             // Handle the special cases separately.
             // `LDX`, `STX`, `JMA`, and `JSR` don't use the `R` field, so set it as `00`.
             sb.append("00");
@@ -127,12 +128,14 @@ public class InstructionEncoder {
             sb.append(getZeroPaddedBinaryString(instruction.getOperands()[operandIndex++], 2));
         }
 
-        if (instruction.getMnemonic().equals("AIR") || instruction.getMnemonic().equals("SIR") || instruction.getOperands().length < 4) {
+        if (instruction.getMnemonic().equals("AIR") || instruction.getMnemonic().equals("SIR") || operandIndex + 1 >= instruction.getOperands().length) {
             // `AIR` and `SIR` don't support indirect addressing; other instructions default to direct (I=0).
+            // For instructions that skip the R field (LDX, STX, JMA, JSR, RFS), the I flag is at
+            // operandIndex+1 (one past the address operand), not at a hardcoded index.
             sb.append("0");
         } else {
-            // Add the `I` field if it exists.
-            sb.append(instruction.getOperands()[3]);
+            // Add the `I` field if it exists (one position after the address operand).
+            sb.append(instruction.getOperands()[operandIndex + 1]);
         }
 
         // Add the `address` field at the end.
