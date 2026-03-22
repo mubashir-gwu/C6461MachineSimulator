@@ -178,7 +178,7 @@ public class UserInterface extends JFrame {
             }
         });
 
-        traceCheckbox = new JCheckBox("Enable Trace Logging");
+        traceCheckbox = new JCheckBox("Enable Trace Logging", true);
         traceCheckbox.setBackground(mainPanel.getBackground());
         traceCheckbox.addActionListener(e -> {
             TraceLogger.getInstance().setEnabled(traceCheckbox.isSelected());

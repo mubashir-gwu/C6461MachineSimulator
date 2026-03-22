@@ -29,7 +29,7 @@ public class TraceLogger {
 
     private TraceLogger() {
         this.stepCounter = 0;
-        this.enabled = false;
+        this.enabled = true;
     }
 
     /**
