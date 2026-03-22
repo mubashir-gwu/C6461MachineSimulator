@@ -1,7 +1,7 @@
 # C6461 Machine Simulator
 
 **George Washington University — CS6461: Computer Architectures**
-**Part I Deliverable**
+**Part II Deliverable**
 
 ## Team Members
 
@@ -11,7 +11,7 @@
 
 ---
 
-A Java-based simulator for the C6461 16-bit computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console.
+A Java-based simulator for the C6461 16-bit computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console. All ISA instructions are fully implemented, including a 16-line fully associative cache, console I/O, machine fault handling, and instruction-level trace logging.
 
 ---
 
@@ -28,7 +28,7 @@ The project is structured as a plain Java module (IntelliJ IDEA). To compile fro
 ```bash
 # From the project root directory
 mkdir -p out
-javac -d out src/Main.java src/cpu/*.java src/encoder/*.java src/fileutil/*.java src/instruction/*.java src/memory/*.java src/opcode/*.java src/outputmanager/*.java src/ui/*.java
+javac -d out src/Main.java src/cpu/*.java src/encoder/*.java src/fileutil/*.java src/instruction/*.java src/memory/*.java src/opcode/*.java src/outputmanager/*.java src/trace/*.java src/ui/*.java
 ```
 
 To package as a JAR:
@@ -66,6 +66,7 @@ Ready-to-run sample programs are provided in the `input/` directory:
 
 - `input/test_program.asm` — Demonstrates load/store, indexed, and indirect addressing with label-based control flow
 - `input/test_part1.asm` — Part I deliverable test covering all Load/Store instructions and all four addressing modes
+- `input/test_faults.asm` — Tests machine fault handling (reserved address access triggers MFR and halts)
 
 ### Loading and Running a Program
 
@@ -104,6 +105,7 @@ Sample programs are provided in the `input/` directory:
 
 - `input/test_program.asm` — Demonstrates load/store, indexed, and indirect addressing with label-based control flow
 - `input/test_part1.asm` — Part I deliverable test covering all Load/Store instructions and all four addressing modes
+- `input/test_faults.asm` — Tests machine fault handling (reserved address access triggers MFR and halts)
 
 ---
 
@@ -113,22 +115,24 @@ Sample programs are provided in the `input/` directory:
 
 ![C6461 Machine Simulator](assets/C6461%20Machine%20Simulator.png)
 
-The simulator window is divided into four regions:
+The simulator window is divided into five regions:
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                        C6461 Machine Simulator                           │
-├─────────────────────────────────────────────────────────────────────────-┤
-│  Load Program: [ file path field                    ]  [ Browse ]        │
-├──────────────────────────┬──────────────────────────┬────────────────────┤
-│  Left Panel              │  Center Panel            │  Right Panel       │
-│  (Registers)             │  (Special Regs/Controls) │  (Messages/Errors) │
-└──────────────────────────┴──────────────────────────┴────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                              C6461 Machine Simulator                                    │
+├────────────────────────────────────────────────────────────────────────────────────────-┤
+│  Load Program: [ file path field            ]  [☑ Enable Trace Logging]  [ Browse ]     │
+├──────────────────┬──────────────────┬────────────────────┬─────────────────────────────-┤
+│  Left Panel      │  Center Panel    │  Right Panel       │  Cache Panel                  │
+│  (Registers)     │  (Special Regs/  │  (Messages/Errors, │  (16-line cache display,      │
+│                  │   Controls)      │   Console I/O)     │   HIT/MISS, FIFO pointer)     │
+└──────────────────┴──────────────────┴────────────────────┴─────────────────────────────-┘
 ```
 
 #### Load Program Bar (top)
 
 - **Program field** — displays the path of the currently selected assembly file.
+- **Enable Trace Logging** — checkbox to toggle instruction-level trace logging. When enabled, every instruction execution is recorded to a timestamped `trace_*.log` file. Enabled by default.
 - **Browse** — opens a file chooser to select a `.asm` source file. After selection, the path is shown and the file is ready to be loaded via the **IPL** button.
 
 #### Left Panel — Registers
@@ -169,8 +173,10 @@ Each register row shows its current value in **octal** and has a **Load** button
 | MAR      | Memory Address Register — address used by Load/Store operations                            |
 | MBR      | Memory Buffer Register — data read from or written to memory                               |
 | IR       | Instruction Register — binary encoding of the last fetched instruction (read-only display) |
+| CC       | Condition Code — 4 bits: OVERFLOW, UNDERFLOW, DIVZERO, EQUALORNOT (displayed as binary)    |
+| MFR      | Machine Fault Register — 4 bits: reserved addr, illegal trap, illegal opcode, out-of-bounds (displayed as binary) |
 
-PC and MAR have **Load** buttons; MBR has a **Load** button; IR is display-only.
+PC and MAR have **Load** buttons; MBR has a **Load** button; IR, CC, and MFR are display-only.
 
 **Load/Store/Run Controls**
 
@@ -185,13 +191,27 @@ PC and MAR have **Load** buttons; MBR has a **Load** button; IR is display-only.
 | **Halt**      | Immediately halts execution                                                                                                                                              |
 | **IPL** (red) | Initial Program Load — assembles the selected `.asm` file, writes listing and load files, loads the machine code into memory, and sets `PC` to the program start address |
 
-#### Right Panel — Messages/Errors
+#### Right Panel — Messages/Errors & Console I/O
 
-Displays runtime messages, confirmations, and error reports. Examples:
+**Messages/Errors** — displays runtime messages, confirmations, and error reports. Examples:
 
 - `Loaded program test_program into memory.`
 - `Loaded value 000052 from address 000012`
 - `ERROR: address out of bounds: 9999 for memory of size 2048`
+
+**Console Keyboard** — text field for typing input consumed by IN instructions (DEVID 0). Characters are read one at a time from left to right. If the field is empty when an IN instruction executes, a dialog prompts the user.
+
+**Console Printer** — read-only text area displaying characters output by OUT instructions (DEVID 1).
+
+#### Cache Panel
+
+Displays the state of the 16-line fully associative cache:
+
+- **Cache lines** — each line shows: Line number, Valid bit, Tag (memory address), and Data (stored word)
+- **HIT/MISS** — indicator showing whether the most recent cache access was a hit or miss
+- **FIFO Pointer** — shows which cache line will be evicted next
+
+The cache uses a write-through, no write-allocate policy: stores always go to main memory, and the cached copy is updated only if the address is already present.
 
 ---
 
@@ -204,6 +224,8 @@ Displays runtime messages, confirmations, and error reports. Examples:
 5. Press **Step** to execute one instruction at a time and observe register changes, or press **Run** to execute the entire program.
 6. Use **Halt** at any time to stop execution.
 7. Check the **Messages/Errors** panel for runtime output and error diagnostics.
+8. Review the **Cache** panel to observe cache behavior (hits, misses, FIFO pointer).
+9. If trace logging is enabled, inspect the generated `trace_*.log` file for a step-by-step execution record.
 
 ---
 
@@ -228,7 +250,8 @@ C6461MachineSimulator/
 │   │   └── CPU.java                     # CPU simulation, fetch-decode-execute cycle
 │   ├── memory/
 │   │   ├── Memory.java                  # 2048-word single-port memory
-│   │   ├── Register.java                # Register enum (GPR0-3, IX1-3, PC, MAR, MBR, IR)
+│   │   ├── Cache.java                   # 16-line fully associative cache (FIFO, write-through)
+│   │   ├── Register.java                # Register enum (GPR0-3, IX1-3, PC, MAR, MBR, IR, CC, MFR)
 │   │   └── RegisterManager.java         # Manages register read/write state
 │   ├── encoder/
 │   │   ├── Encoder.java                 # Two-pass assembler (tokenize → label map → encode)
@@ -246,11 +269,14 @@ C6461MachineSimulator/
 │   │   └── FileWriter.java              # Writes .lst and .load output files
 │   ├── outputmanager/
 │   │   └── OutputManager.java           # Routes messages/errors to the UI text area
+│   ├── trace/
+│   │   └── TraceLogger.java             # Singleton trace logger — records every instruction to a timestamped log file
 │   └── ui/
 │       └── UserInterface.java           # Swing GUI — console layout and all button wiring
 ├── input/
 │   ├── test_program.asm                 # Sample program (addressing modes + control flow demo)
-│   └── test_part1.asm                   # Part I deliverable: all Load/Store instructions and addressing modes
+│   ├── test_part1.asm                   # Part I deliverable: all Load/Store instructions and addressing modes
+│   └── test_faults.asm                  # Machine fault handling test (reserved address triggers MFR)
 └── instruction_docs/
     ├── CSCI6461 Project Description.pdf
     └── C6461 Class Project Instruction Set Architecture.pdf
@@ -258,7 +284,9 @@ C6461MachineSimulator/
 
 ---
 
-## Supported Instructions (Part I)
+## Supported Instructions
+
+All instructions listed below are fully implemented in both the assembler and the CPU.
 
 ### Load/Store
 
@@ -341,4 +369,4 @@ C6461MachineSimulator/
 | Indirect         | `r, 0, addr, 1`  | `EA = c(addr)`           |
 | Indexed+Indirect | `r, ix, addr, 1` | `EA = c(addr + c(IXix))` |
 
-All addresses in source files are **decimal**; the assembler converts them to octal encoding. All register displays in the simulator show values in **octal**.
+All addresses in source files are **decimal**; the assembler converts them to octal encoding. Most register displays in the simulator show values in **octal**; CC and MFR are displayed as 4-digit **binary** strings.
