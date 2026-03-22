@@ -180,34 +180,18 @@ public class CPU {
         registerManager.loadRegister(Register.MBR, value);
         registerManager.loadRegister(Register.IR, value);
 
-        switch (opcodeType) {
-            case LOAD_STORE:
-                executeLoadStoreInstruction(value);
-                break;
-            case TRANSFER:
-                executeTransferInstruction(value);
-                break;
-            case ARITHMETIC:
-                executeArithmeticInstruction(value);
-                break;
-            case MULTIPLY_DIVIDE:
-                executeMultiplyDivideInstruction(value);
-                break;
-            case LOGICAL:
-                executeLogicalInstruction(value);
-                break;
-            case SHIFT_ROTATE:
-                executeShiftRotateInstruction(value);
-                break;
-            case IO:
-                executeIOInstruction(value);
-                break;
-            case MISC:
-                executeMiscInstruction(value);
-                break;
-        }
+        boolean pcModified = switch (opcodeType) {
+            case LOAD_STORE -> executeLoadStoreInstruction(value);
+            case TRANSFER -> executeTransferInstruction(value);
+            case ARITHMETIC -> executeArithmeticInstruction(value);
+            case MULTIPLY_DIVIDE -> executeMultiplyDivideInstruction(value);
+            case LOGICAL -> executeLogicalInstruction(value);
+            case SHIFT_ROTATE -> executeShiftRotateInstruction(value);
+            case IO -> executeIOInstruction(value);
+            case MISC -> executeMiscInstruction(value);
+        };
 
-        if (!halted) {
+        if (!halted && !pcModified) {
             programCounter += 1;
         }
 
@@ -238,8 +222,9 @@ public class CPU {
      * </ul>
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeLoadStoreInstruction(int instructionValue) {
+    public boolean executeLoadStoreInstruction(int instructionValue) {
         final TraceLogger trace = TraceLogger.getInstance();
         final int opcode  = instructionValue >> 10;
         final int r       = (instructionValue >> 8) & 0b11;   // GPR number (bits 9:8)
@@ -282,7 +267,7 @@ public class CPU {
                 trace.logMemoryAccess("READ", indirectAddr, ea);
             } catch (IndexOutOfBoundsException e) {
                 outputManager.writeError(e.getMessage());
-                return;
+                return false;
             }
         }
 
@@ -300,7 +285,7 @@ public class CPU {
                     value = memory.getMemoryAt(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
-                    return;
+                    return false;
                 }
 
                 trace.logMemoryAccess("READ", ea, value);
@@ -317,7 +302,7 @@ public class CPU {
                     memory.setMemoryAt(ea, strValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
-                    return;
+                    return false;
                 }
 
                 trace.logMemoryAccess("WRITE", ea, strValue);
@@ -334,7 +319,7 @@ public class CPU {
                     value = memory.getMemoryAt(ea);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
-                    return;
+                    return false;
                 }
 
                 trace.logMemoryAccess("READ", ea, value);
@@ -351,13 +336,14 @@ public class CPU {
                     memory.setMemoryAt(ea, stxValue);
                 } catch (IndexOutOfBoundsException e) {
                     outputManager.writeError(e.getMessage());
-                    return;
+                    return false;
                 }
 
                 trace.logMemoryAccess("WRITE", ea, stxValue);
                 trace.logExecute("STX: Memory[" + ea + "(oct:" + Integer.toOctalString(ea) + ")] <- IX" + ix + " = " + stxValue + "(oct:" + Integer.toOctalString(stxValue) + ")");
                 break;
         }
+        return false;
     }
 
     /**
@@ -365,8 +351,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeTransferInstruction(int instructionValue) {
+    public boolean executeTransferInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -374,8 +362,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeArithmeticInstruction(int instructionValue) {
+    public boolean executeArithmeticInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -383,8 +373,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeMultiplyDivideInstruction(int instructionValue) {
+    public boolean executeMultiplyDivideInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -392,8 +384,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeLogicalInstruction(int instructionValue) {
+    public boolean executeLogicalInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -401,8 +395,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeShiftRotateInstruction(int instructionValue) {
+    public boolean executeShiftRotateInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -410,8 +406,10 @@ public class CPU {
      * Not yet implemented for Part I.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeIOInstruction(int instructionValue) {
+    public boolean executeIOInstruction(int instructionValue) {
+        return false;
     }
 
     /**
@@ -421,8 +419,9 @@ public class CPU {
      * the execution loop.
      *
      * @param instructionValue the raw 16-bit instruction word
+     * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
      */
-    public void executeMiscInstruction(int instructionValue) {
+    public boolean executeMiscInstruction(int instructionValue) {
         final TraceLogger trace = TraceLogger.getInstance();
         final int opcode = instructionValue >> 10;
         final String opcodeMnemonic = OpcodeLookupTable.getMnemonic(opcode);
@@ -433,6 +432,7 @@ public class CPU {
             halted = true;
             trace.logHalt();
         }
+        return false;
     }
 
     /**
