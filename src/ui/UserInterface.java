@@ -16,6 +16,8 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
@@ -83,6 +85,15 @@ public class UserInterface extends JFrame {
 
     /** Label showing the current FIFO replacement pointer position. */
     private JLabel cacheFifoLabel;
+
+    /** Full text content of the file loaded into the Card Reader (DEVID 2). */
+    private String cardReaderContent;
+
+    /** Current read position in the Card Reader content (advances on each IN r,2). */
+    private int cardReaderPosition;
+
+    /** Label showing the currently loaded Card Reader filename. */
+    private JLabel cardReaderFileLabel;
 
     /** Monospace font used for register value display fields. */
     private final Font monospaceFont = new Font(Font.MONOSPACED, Font.PLAIN, 14);
@@ -289,6 +300,19 @@ public class UserInterface extends JFrame {
             String text = consoleKeyboardField.getText();
             return (text != null && !text.isEmpty()) ? 1 : 0;
         });
+
+        // IN (DEVID 2): read one character from the card reader file.
+        cpu.setCardReaderInputProvider(() -> {
+            if (cardReaderContent == null || cardReaderPosition >= cardReaderContent.length()) {
+                return -1; // EOF or no file loaded.
+            }
+            return (int) cardReaderContent.charAt(cardReaderPosition++);
+        });
+
+        // CHK (DEVID 2): card reader status — 1 if data is available.
+        cpu.setCardReaderStatusProvider(() ->
+            (cardReaderContent != null && cardReaderPosition < cardReaderContent.length()) ? 1 : 0
+        );
     }
 
     /**
@@ -527,6 +551,8 @@ public class UserInterface extends JFrame {
             // Clear console I/O areas for the new program run.
             consolePrinterArea.setText("");
             consoleKeyboardField.setText("");
+            // Reset card reader position (keep the loaded file so it can be reused).
+            cardReaderPosition = 0;
 
             int programStartAddress = cpu.loadProgramToMemory(loadFilePath);
             this.cpu.setProgramCounter(programStartAddress);
@@ -629,6 +655,44 @@ public class UserInterface extends JFrame {
 
         rightPanel.add(Box.createVerticalStrut(10));
         rightPanel.add(printerPanel);
+
+        // Card Reader panel (for IN instruction, DEVID 2).
+        JPanel cardReaderPanel = new JPanel();
+        cardReaderPanel.setLayout(new BoxLayout(cardReaderPanel, BoxLayout.Y_AXIS));
+        cardReaderPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createTitledBorder("Card Reader (IN DEVID 2)"),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)
+        ));
+
+        cardReaderFileLabel = new JLabel("No file loaded");
+        cardReaderFileLabel.setFont(monospaceFont);
+        cardReaderFileLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton cardReaderBrowse = new JButton("Load File");
+        cardReaderBrowse.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cardReaderBrowse.addActionListener(e -> {
+            JFileChooser fc = new JFileChooser(new File("."));
+            fc.setDialogTitle("Select Card Reader Input File");
+            if (fc.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+                try {
+                    cardReaderContent = new String(Files.readAllBytes(fc.getSelectedFile().toPath()));
+                    cardReaderPosition = 0;
+                    cardReaderFileLabel.setText(fc.getSelectedFile().getName()
+                            + " (" + cardReaderContent.length() + " chars)");
+                    outputManager.writeMessage("Card Reader: loaded " + fc.getSelectedFile().getName());
+                } catch (IOException ex) {
+                    outputManager.writeError("Card Reader: could not read file — " + ex.getMessage());
+                }
+            }
+        });
+
+        cardReaderPanel.add(cardReaderFileLabel);
+        cardReaderPanel.add(Box.createVerticalStrut(5));
+        cardReaderPanel.add(cardReaderBrowse);
+        cardReaderPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, cardReaderPanel.getPreferredSize().height));
+
+        rightPanel.add(Box.createVerticalStrut(10));
+        rightPanel.add(cardReaderPanel);
 
         return rightPanel;
     }
