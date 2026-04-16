@@ -353,10 +353,9 @@ public class CPU {
             raiseFault(0b1000, "Illegal memory address beyond 2048: " + address);
             return 0;
         }
-        if (address >= 0 && address <= 5) {
-            raiseFault(0b0001, "Illegal memory address to reserved location: " + address);
-            return 0;
-        }
+        // Note: reading reserved locations 0-5 is allowed. TRAP routines must read
+        // location 2 (saved return address) and fault handlers must read location 4.
+        // Only *writing* to reserved locations is restricted (see writeMemory).
 
         // Check cache first.
         int cached = cache.lookup(address);
