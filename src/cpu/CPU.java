@@ -1138,8 +1138,16 @@ public class CPU {
     /**
      * Executes a miscellaneous instruction (HLT, TRAP).
      *
-     * <p>Currently handles only {@code HLT}, which sets the {@link #halted} flag to stop
-     * the execution loop.
+     * <p>{@code HLT} sets the {@link #halted} flag to stop the execution loop.
+     *
+     * <p>{@code TRAP} implements the software trap mechanism:
+     * <ol>
+     *   <li>Saves PC+1 (the return address) to reserved memory location 2.</li>
+     *   <li>Reads the trap table base address from memory location 0.</li>
+     *   <li>Uses the trap code (bits [3:0]) as an index into the trap table.</li>
+     *   <li>Sets PC to the trap routine address found at {@code table[trapCode]}.</li>
+     * </ol>
+     * The trap routine returns by jumping to the address stored in memory location 2.
      *
      * @param instructionValue the raw 16-bit instruction word
      * @return {@code true} if the instruction modified PC directly, {@code false} otherwise
@@ -1154,7 +1162,49 @@ public class CPU {
         if (opcodeMnemonic.equals("HLT")) {
             halted = true;
             trace.logHalt();
+            return false;
         }
+
+        if (opcodeMnemonic.equals("TRAP")) {
+            int trapCode = instructionValue & 0xF;
+            trace.logExecute("TRAP: trap_code=" + trapCode);
+
+            // Save return address (PC+1) to reserved memory location 2.
+            writeMemoryPrivileged(2, programCounter + 1);
+
+            // Read trap table base address from reserved memory location 0.
+            int trapTableBase = memory.getMemoryAt(0);
+
+            if (trapTableBase == 0) {
+                raiseFault(0b0010, "Trap table not initialized (memory location 0 = 0)");
+                return false;
+            }
+
+            // Index into the trap table to find the routine address.
+            int trapRoutineAddrLocation = trapTableBase + trapCode;
+            int trapRoutineAddr;
+            try {
+                trapRoutineAddr = readMemory(trapRoutineAddrLocation);
+            } catch (IndexOutOfBoundsException e) {
+                outputManager.writeError(e.getMessage());
+                return false;
+            }
+            if (halted) return false; // Fault during trap table read.
+
+            if (trapRoutineAddr == 0) {
+                raiseFault(0b0010, "No handler for TRAP code " + trapCode
+                        + " (table[" + trapCode + "] at address " + trapRoutineAddrLocation + " = 0)");
+                return false;
+            }
+
+            // Jump to the trap routine.
+            programCounter = trapRoutineAddr;
+            trace.logExecute("TRAP: PC <- " + trapRoutineAddr
+                    + " (from trap_table[" + trapCode + "] at address " + trapRoutineAddrLocation + ")"
+                    + ", return address " + (programCounter) + " saved to location 2");
+            return true; // PC was modified directly.
+        }
+
         return false;
     }
 
