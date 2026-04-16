@@ -666,10 +666,8 @@ public class UserInterface extends JFrame {
 
         cardReaderFileLabel = new JLabel("No file loaded");
         cardReaderFileLabel.setFont(monospaceFont);
-        cardReaderFileLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JButton cardReaderBrowse = new JButton("Load File");
-        cardReaderBrowse.setAlignmentX(Component.LEFT_ALIGNMENT);
         cardReaderBrowse.addActionListener(e -> {
             JFileChooser fc = new JFileChooser(new File("."));
             fc.setDialogTitle("Select Card Reader Input File");
@@ -686,9 +684,16 @@ public class UserInterface extends JFrame {
             }
         });
 
-        cardReaderPanel.add(cardReaderFileLabel);
-        cardReaderPanel.add(Box.createVerticalStrut(5));
-        cardReaderPanel.add(cardReaderBrowse);
+        // Inner panel holds the label + button with BoxLayout; outer panel
+        // uses BorderLayout.NORTH so it fills width but doesn't stretch vertically.
+        JPanel cardReaderInner = new JPanel();
+        cardReaderInner.setLayout(new BoxLayout(cardReaderInner, BoxLayout.Y_AXIS));
+        cardReaderInner.setOpaque(false);
+        cardReaderInner.add(cardReaderFileLabel);
+        cardReaderInner.add(Box.createVerticalStrut(5));
+        cardReaderInner.add(cardReaderBrowse);
+        cardReaderPanel.setLayout(new BorderLayout());
+        cardReaderPanel.add(cardReaderInner, BorderLayout.NORTH);
         cardReaderPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, cardReaderPanel.getPreferredSize().height));
 
         rightPanel.add(Box.createVerticalStrut(10));
