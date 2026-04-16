@@ -1131,9 +1131,23 @@ public class CPU {
                     trace.logExecute("IN: R" + r + " <- keyboard char " + charVal +
                             " ('" + (char) charVal + "')");
                 } else if (devid == 2) {
-                    // Card Reader — not yet implemented.
-                    outputManager.writeError("IN: Card reader (DEVID 2) not yet implemented.");
-                    trace.logExecute("IN: Card reader (DEVID 2) not yet implemented");
+                    // Card Reader
+                    if (cardReaderInputProvider == null) {
+                        outputManager.writeError("IN: No card reader file loaded.");
+                        trace.logExecute("IN: ERROR — no card reader provider");
+                        return false;
+                    }
+                    int charVal = cardReaderInputProvider.get();
+                    if (charVal < 0) {
+                        // End of file — store 0 to signal EOF.
+                        registerManager.loadRegister(gpr, 0);
+                        trace.logExecute("IN: Card reader EOF, R" + r + " <- 0");
+                    } else {
+                        registerManager.loadRegister(gpr, charVal & 0xFFFF);
+                        trace.logIO("IN", devid, charVal);
+                        trace.logExecute("IN: R" + r + " <- card reader char " + charVal
+                                + " ('" + (char) charVal + "')");
+                    }
                 } else {
                     outputManager.writeError("IN: Unknown device ID " + devid);
                     trace.logExecute("IN: ERROR — unknown DEVID " + devid);
