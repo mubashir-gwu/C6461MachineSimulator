@@ -56,6 +56,15 @@ public class CPU {
     /** Accepts a single character (as an integer) for the console printer for OUT instructions. */
     private Consumer<Integer> consolePrinterConsumer;
 
+    /** Provides a single character (as an integer) from the card reader for IN instructions (DEVID 2). */
+    private Supplier<Integer> cardReaderInputProvider;
+
+    /** Returns the device status for the console keyboard (1 = ready, 0 = not ready) for CHK. */
+    private Supplier<Integer> consoleKeyboardStatusProvider;
+
+    /** Returns the device status for the card reader (1 = data available, 0 = EOF/no file) for CHK. */
+    private Supplier<Integer> cardReaderStatusProvider;
+
     /**
      * When a machine fault occurs and a fault handler is installed (memory location 1 ≠ 0),
      * this field holds the handler address. The try-finally block in {@link #executeNextInstruction()}
@@ -98,6 +107,33 @@ public class CPU {
      */
     public void setConsolePrinterConsumer(Consumer<Integer> consumer) {
         this.consolePrinterConsumer = consumer;
+    }
+
+    /**
+     * Sets the card reader input provider used by IN instructions (DEVID 2) to read one character.
+     *
+     * @param provider a supplier that returns the next character as an integer, or -1 on EOF
+     */
+    public void setCardReaderInputProvider(Supplier<Integer> provider) {
+        this.cardReaderInputProvider = provider;
+    }
+
+    /**
+     * Sets the keyboard status provider used by CHK instructions (DEVID 0).
+     *
+     * @param provider a supplier that returns 1 if the keyboard has input ready, 0 otherwise
+     */
+    public void setConsoleKeyboardStatusProvider(Supplier<Integer> provider) {
+        this.consoleKeyboardStatusProvider = provider;
+    }
+
+    /**
+     * Sets the card reader status provider used by CHK instructions (DEVID 2).
+     *
+     * @param provider a supplier that returns 1 if data is available, 0 on EOF or no file loaded
+     */
+    public void setCardReaderStatusProvider(Supplier<Integer> provider) {
+        this.cardReaderStatusProvider = provider;
     }
 
     /**
@@ -1126,10 +1162,31 @@ public class CPU {
                 break;
             }
 
-            case "CHK":
-                outputManager.writeError("CHK: Not implemented (Part III/IV).");
-                trace.logExecute("CHK: Not implemented");
+            case "CHK": {
+                // Check device status and store in register r.
+                trace.logExecute("CHK: checking status of device " + devid);
+                int status;
+                switch (devid) {
+                    case 0:
+                        // Console Keyboard
+                        status = (consoleKeyboardStatusProvider != null) ? consoleKeyboardStatusProvider.get() : 0;
+                        break;
+                    case 1:
+                        // Console Printer — always ready.
+                        status = 1;
+                        break;
+                    case 2:
+                        // Card Reader
+                        status = (cardReaderStatusProvider != null) ? cardReaderStatusProvider.get() : 0;
+                        break;
+                    default:
+                        status = 0;
+                        break;
+                }
+                registerManager.loadRegister(gpr, status);
+                trace.logExecute("CHK: R" + r + " <- device " + devid + " status = " + status);
                 break;
+            }
         }
 
         return false;

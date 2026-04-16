@@ -283,6 +283,12 @@ public class UserInterface extends JFrame {
         cpu.setConsolePrinterConsumer(charVal -> {
             consolePrinterArea.append(String.valueOf((char) (int) charVal));
         });
+
+        // CHK (DEVID 0): keyboard status — 1 if the keyboard field has pending input.
+        cpu.setConsoleKeyboardStatusProvider(() -> {
+            String text = consoleKeyboardField.getText();
+            return (text != null && !text.isEmpty()) ? 1 : 0;
+        });
     }
 
     /**
