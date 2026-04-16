@@ -1,7 +1,7 @@
 # C6461 Machine Simulator
 
-**George Washington University — CS6461: Computer Architectures**
-**Part II Deliverable**
+**George Washington University - CS6461: Computer Architectures**
+**Part III Deliverable**
 
 ## Team Members
 
@@ -11,7 +11,7 @@
 
 ---
 
-A Java-based simulator for the C6461 16-bit computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console. All ISA instructions are fully implemented, including a 16-line fully associative cache, console I/O, machine fault handling, and instruction-level trace logging.
+A Java-based simulator for the C6461 16-bit computer architecture. The simulator includes a built-in assembler that translates assembly source files into machine code, loads programs into simulated memory, and executes them through a graphical operator console. All ISA instructions are fully implemented, including a 16-line fully associative cache, console I/O (keyboard, printer, card reader), machine fault handling with handler redirection, TRAP instruction with trap table dispatch, and instruction-level trace logging.
 
 ---
 
@@ -64,13 +64,17 @@ The simulator window will open immediately upon launch. No command-line argument
 
 Ready-to-run sample programs are provided in the `input/` directory:
 
-- `input/test_program.asm` — Demonstrates load/store, indexed, and indirect addressing with label-based control flow
-- `input/test_part1.asm` — Part I deliverable test covering all Load/Store instructions and all four addressing modes
-- `input/test_faults.asm` — Tests machine fault handling (reserved address access triggers MFR and halts)
+- `input/test_program.asm`: Demonstrates load/store, indexed, and indirect addressing with label-based control flow
+- `input/test_part1.asm`: Part I deliverable test covering all Load/Store instructions and all four addressing modes
+- `input/test_faults.asm`: Tests machine fault handling (reserved address access triggers MFR and halts)
+- `input/test_fault_handler.asm`: Tests fault handler redirection (Part III: fault saves PC, jumps to handler)
+- `input/test_trap.asm`: Tests TRAP instruction dispatch and return via trap table (Part III)
+- `input/program1.asm`: Program 1: reads 20 integers, prints them, finds closest to target
+- `input/program2.asm`: Program 2: reads paragraph from file, searches for a word (Part III, requires `paragraph.txt` via Card Reader)
 
 ### Loading and Running a Program
 
-1. Click the **Browse** button at the top of the simulator window. A file picker dialog will open — navigate to any `.asm` file (for example, one of the samples in `input/`) and select it. The file path appears in the program field.
+1. Click the **Browse** button at the top of the simulator window. A file picker dialog will open. Navigate to any `.asm` file (for example, one of the samples in `input/`) and select it. The file path appears in the program field.
 2. Press **IPL** (the red button). The assembler compiles the `.asm` source into a `.load` machine-code file and a `.lst` listing file (written alongside the source), then loads the program into simulated memory and sets the PC to the program's start address.
 3. Press **Step** to execute one instruction at a time and observe register changes, or press **Run** to execute the full program until a `HLT` instruction.
 
@@ -101,11 +105,7 @@ LABEL: LDR 0,0,10   ; Load R0 from address 10
 | Comment            | `;` to end of line         | `; my comment`     |
 | Instruction        | `MNEMONIC r,ix,addr[,i]`   | `LDR 1,2,15,1`     |
 
-Sample programs are provided in the `input/` directory:
-
-- `input/test_program.asm` — Demonstrates load/store, indexed, and indirect addressing with label-based control flow
-- `input/test_part1.asm` — Part I deliverable test covering all Load/Store instructions and all four addressing modes
-- `input/test_faults.asm` — Tests machine fault handling (reserved address access triggers MFR and halts)
+Sample programs are provided in the `input/` directory (see "Sample Programs" section above).
 
 ---
 
@@ -131,11 +131,11 @@ The simulator window is divided into five regions:
 
 #### Load Program Bar (top)
 
-- **Program field** — displays the path of the currently selected assembly file.
-- **Enable Trace Logging** — checkbox to toggle instruction-level trace logging. When enabled, every instruction execution is recorded to a timestamped `trace_*.log` file. Enabled by default.
-- **Browse** — opens a file chooser to select a `.asm` source file. After selection, the path is shown and the file is ready to be loaded via the **IPL** button.
+- **Program field**: displays the path of the currently selected assembly file.
+- **Enable Trace Logging**: checkbox to toggle instruction-level trace logging. When enabled, every instruction execution is recorded to a timestamped `trace_*.log` file. Enabled by default.
+- **Browse**: opens a file chooser to select a `.asm` source file. After selection, the path is shown and the file is ready to be loaded via the **IPL** button.
 
-#### Left Panel — Registers
+#### Left Panel: Registers
 
 **General Purpose Registers (GPR)**
 
@@ -159,22 +159,22 @@ Each register row shows its current value in **octal** and has a **Load** button
 1. Type an octal value into the **Octal Input** field.
 2. Click the **Load** button next to the target register.
 
-**Octal Input** — text field for entering an octal value to load into any register.
+**Octal Input**: text field for entering an octal value to load into any register.
 
-**Binary Equivalent** — read-only field that automatically shows the 16-bit binary representation of whatever is typed in the Octal Input field.
+**Binary Equivalent**: read-only field that automatically shows the 16-bit binary representation of whatever is typed in the Octal Input field.
 
-#### Center Panel — Special Registers & Controls
+#### Center Panel: Special Registers & Controls
 
 **Special Registers/Counters**
 
 | Register | Description                                                                                |
 | -------- | ------------------------------------------------------------------------------------------ |
-| PC       | Program Counter — address of the next instruction to execute                               |
-| MAR      | Memory Address Register — address used by Load/Store operations                            |
-| MBR      | Memory Buffer Register — data read from or written to memory                               |
-| IR       | Instruction Register — binary encoding of the last fetched instruction (read-only display) |
-| CC       | Condition Code — 4 bits: OVERFLOW, UNDERFLOW, DIVZERO, EQUALORNOT (displayed as binary)    |
-| MFR      | Machine Fault Register — 4 bits: reserved addr, illegal trap, illegal opcode, out-of-bounds (displayed as binary) |
+| PC       | Program Counter: address of the next instruction to execute                               |
+| MAR      | Memory Address Register: address used by Load/Store operations                            |
+| MBR      | Memory Buffer Register: data read from or written to memory                               |
+| IR       | Instruction Register: binary encoding of the last fetched instruction (read-only display) |
+| CC       | Condition Code: 4 bits: OVERFLOW, UNDERFLOW, DIVZERO, EQUALORNOT (displayed as binary)    |
+| MFR      | Machine Fault Register: 4 bits: reserved addr, illegal trap, illegal opcode, out-of-bounds (displayed as binary) |
 
 PC and MAR have **Load** buttons; MBR has a **Load** button; IR, CC, and MFR are display-only.
 
@@ -189,27 +189,29 @@ PC and MAR have **Load** buttons; MBR has a **Load** button; IR, CC, and MFR are
 | **Run**       | Runs the program from the current `PC` until a `HLT` instruction                                                                                                         |
 | **Step**      | Executes a single instruction at the current `PC`, then pauses                                                                                                           |
 | **Halt**      | Immediately halts execution                                                                                                                                              |
-| **IPL** (red) | Initial Program Load — assembles the selected `.asm` file, writes listing and load files, loads the machine code into memory, and sets `PC` to the program start address |
+| **IPL** (red) | Initial Program Load: assembles the selected `.asm` file, writes listing and load files, loads the machine code into memory, and sets `PC` to the program start address |
 
-#### Right Panel — Messages/Errors & Console I/O
+#### Right Panel: Messages/Errors & Console I/O
 
-**Messages/Errors** — displays runtime messages, confirmations, and error reports. Examples:
+**Messages/Errors**: displays runtime messages, confirmations, and error reports. Examples:
 
 - `Loaded program test_program into memory.`
 - `Loaded value 000052 from address 000012`
 - `ERROR: address out of bounds: 9999 for memory of size 2048`
 
-**Console Keyboard** — text field for typing input consumed by IN instructions (DEVID 0). Characters are read one at a time from left to right. If the field is empty when an IN instruction executes, a dialog prompts the user.
+**Console Keyboard**: text field for typing input consumed by IN instructions (DEVID 0). Characters are read one at a time from left to right. If the field is empty when an IN instruction executes, a dialog prompts the user.
 
-**Console Printer** — read-only text area displaying characters output by OUT instructions (DEVID 1).
+**Console Printer**: read-only text area displaying characters output by OUT instructions (DEVID 1).
+
+**Card Reader (IN DEVID 2)**: file loader for card reader input. Click "Load File" to select a text file; its content is fed character-by-character to IN instructions using DEVID 2. Returns 0 (EOF) when all characters are consumed. The read position resets on each IPL.
 
 #### Cache Panel
 
 Displays the state of the 16-line fully associative cache:
 
-- **Cache lines** — each line shows: Line number, Valid bit, Tag (memory address), and Data (stored word)
-- **HIT/MISS** — indicator showing whether the most recent cache access was a hit or miss
-- **FIFO Pointer** — shows which cache line will be evicted next
+- **Cache lines**: each line shows Line number, Valid bit, Tag (memory address), and Data (stored word)
+- **HIT/MISS**: indicator showing whether the most recent cache access was a hit or miss
+- **FIFO Pointer**: shows which cache line will be evicted next
 
 The cache uses a write-through, no write-allocate policy: stores always go to main memory, and the cached copy is updated only if the address is already present.
 
@@ -219,7 +221,7 @@ The cache uses a write-through, no write-allocate policy: stores always go to ma
 
 1. **Write** an assembly program and save it as a `.asm` file.
 2. **Browse** to select the file using the Browse button.
-3. Press **IPL** (red button) — the assembler runs, the listing file (`.lst`) and load file (`.load`) are written to disk next to the source, and the program is loaded into simulated memory.
+3. Press **IPL** (red button). The assembler runs, the listing file (`.lst`) and load file (`.load`) are written to disk next to the source, and the program is loaded into simulated memory.
 4. Optionally, manually set **PC** to a specific address using Octal Input + the PC Load button.
 5. Press **Step** to execute one instruction at a time and observe register changes, or press **Run** to execute the entire program.
 6. Use **Halt** at any time to stop execution.
@@ -235,8 +237,8 @@ When IPL is pressed, two files are generated in the same directory as the source
 
 | File          | Description                                                                             |
 | ------------- | --------------------------------------------------------------------------------------- |
-| `<name>.lst`  | Listing file — each line shows octal address, octal encoding, and original source       |
-| `<name>.load` | Load file — pairs of `<octal address> <octal value>` consumed by the simulator's loader |
+| `<name>.lst`  | Listing file: each line shows octal address, octal encoding, and original source       |
+| `<name>.load` | Load file: pairs of `<octal address> <octal value>` consumed by the simulator's loader |
 
 ---
 
@@ -270,15 +272,20 @@ C6461MachineSimulator/
 │   ├── outputmanager/
 │   │   └── OutputManager.java           # Routes messages/errors to the UI text area
 │   ├── trace/
-│   │   └── TraceLogger.java             # Singleton trace logger — records every instruction to a timestamped log file
+│   │   └── TraceLogger.java             # Singleton trace logger, records every instruction to a timestamped log file
 │   └── ui/
-│       └── UserInterface.java           # Swing GUI — console layout and all button wiring
+│       └── UserInterface.java           # Swing GUI, console layout and all button wiring
 ├── input/
 │   ├── test_program.asm                 # Sample program (addressing modes + control flow demo)
 │   ├── test_part1.asm                   # Part I deliverable: all Load/Store instructions and addressing modes
-│   └── test_faults.asm                  # Machine fault handling test (reserved address triggers MFR)
-└── instruction_docs/
-    ├── CSCI6461 Project Description.pdf
+│   ├── test_faults.asm                  # Machine fault handling test (reserved address triggers MFR)
+│   ├── test_fault_handler.asm           # Fault handler redirection test (Part III)
+│   ├── test_trap.asm                    # TRAP instruction dispatch and return test (Part III)
+│   ├── program1.asm                     # Program 1: 20-number search
+│   ├── program2.asm                     # Program 2: paragraph word search (Part III)
+│   └── paragraph.txt                    # Sample paragraph file for Program 2 (6 sentences)
+└── docs/
+    ├── CSCI6461ProjectDescription2024.pdf
     └── C6461 Class Project Instruction Set Architecture.pdf
 ```
 
