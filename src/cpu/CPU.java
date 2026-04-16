@@ -409,6 +409,33 @@ public class CPU {
         trace.logMemoryAccess("WRITE", address, value);
     }
 
+    /**
+     * Writes a word to memory bypassing the reserved-location check (addresses 0–5).
+     *
+     * <p>Used exclusively by the CPU for internal operations that must access reserved
+     * memory locations: TRAP (saves PC+1 to location 2) and machine fault handling
+     * (saves PC to location 4). The out-of-bounds check (≥ 2048) is still enforced.
+     *
+     * @param address the memory address to write
+     * @param value   the 16-bit word to store
+     */
+    private void writeMemoryPrivileged(int address, int value) {
+        final TraceLogger trace = TraceLogger.getInstance();
+
+        if (address >= 2048 || address < 0) {
+            raiseFault(0b1000, "Illegal memory address beyond 2048: " + address);
+            return;
+        }
+
+        memory.setMemoryAt(address, value);
+
+        boolean updated = cache.writeThrough(address, value);
+        if (updated) {
+            trace.logCacheEvent("WRITE-THROUGH (privileged) updated line=" + cache.getLastAccessedLine(), address);
+        }
+        trace.logMemoryAccess("WRITE (privileged)", address, value);
+    }
+
     // ── Instruction execution methods ────────────────────────────────────────────
 
     /**
