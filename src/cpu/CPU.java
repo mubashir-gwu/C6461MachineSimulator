@@ -57,6 +57,14 @@ public class CPU {
     private Consumer<Integer> consolePrinterConsumer;
 
     /**
+     * When a machine fault occurs and a fault handler is installed (memory location 1 ≠ 0),
+     * this field holds the handler address. The try-finally block in {@link #executeNextInstruction()}
+     * redirects PC to this address and resumes execution after the faulting instruction aborts.
+     * A value of -1 means no pending fault redirect.
+     */
+    private int pendingFaultHandler = -1;
+
+    /**
      * Constructs a new CPU with freshly initialised memory and registers.
      */
     public CPU() {
@@ -200,53 +208,66 @@ public class CPU {
      */
     public void executeNextInstruction() {
         final TraceLogger trace = TraceLogger.getInstance();
-        final int value;
 
         try {
-            value = readMemory(programCounter);
-        } catch (IndexOutOfBoundsException e) {
-            outputManager.writeError(e.getMessage());
-            return;
+            final int value;
+
+            try {
+                value = readMemory(programCounter);
+            } catch (IndexOutOfBoundsException e) {
+                outputManager.writeError(e.getMessage());
+                return;
+            }
+            if (halted) return; // Fault raised during instruction fetch.
+
+            // Extract the opcode from bits [15:10] of the instruction word.
+            final int opcode = value >> 10;
+            final OpcodeType opcodeType = OpcodeLookupTable.getOpcodeType(opcode);
+
+            if (opcodeType == null) {
+                raiseFault(0b0100, "Illegal opcode " + Integer.toOctalString(opcode) + " at address " + Integer.toOctalString(programCounter));
+                return;
+            }
+
+            // Log the fetch phase.
+            trace.logFetch(programCounter, value);
+
+            // Update the register values to reflect the current fetch.
+            registerManager.loadRegister(Register.MAR, programCounter);
+            registerManager.loadRegister(Register.MBR, value);
+            registerManager.loadRegister(Register.IR, value);
+
+            boolean pcModified = switch (opcodeType) {
+                case LOAD_STORE -> executeLoadStoreInstruction(value);
+                case TRANSFER -> executeTransferInstruction(value);
+                case ARITHMETIC -> executeArithmeticInstruction(value);
+                case MULTIPLY_DIVIDE -> executeMultiplyDivideInstruction(value);
+                case LOGICAL -> executeLogicalInstruction(value);
+                case SHIFT_ROTATE -> executeShiftRotateInstruction(value);
+                case IO -> executeIOInstruction(value);
+                case MISC -> executeMiscInstruction(value);
+            };
+
+            if (!halted && !pcModified) {
+                programCounter += 1;
+            }
+
+            registerManager.loadRegister(Register.PC, programCounter);
+
+            // Log full register state after each instruction.
+            trace.logRegisterState(registerManager);
+            trace.incrementStep();
+        } finally {
+            // If a machine fault occurred and a handler is installed, redirect PC to the
+            // handler and resume execution. This runs after any early returns caused by
+            // raiseFault() setting halted = true.
+            if (pendingFaultHandler >= 0) {
+                programCounter = pendingFaultHandler;
+                registerManager.loadRegister(Register.PC, programCounter);
+                halted = false;
+                pendingFaultHandler = -1;
+            }
         }
-        if (halted) return; // Fault raised during instruction fetch.
-
-        // Extract the opcode from bits [15:10] of the instruction word.
-        final int opcode = value >> 10;
-        final OpcodeType opcodeType = OpcodeLookupTable.getOpcodeType(opcode);
-
-        if (opcodeType == null) {
-            raiseFault(0b0100, "Illegal opcode " + Integer.toOctalString(opcode) + " at address " + Integer.toOctalString(programCounter));
-            return;
-        }
-
-        // Log the fetch phase.
-        trace.logFetch(programCounter, value);
-
-        // Update the register values to reflect the current fetch.
-        registerManager.loadRegister(Register.MAR, programCounter);
-        registerManager.loadRegister(Register.MBR, value);
-        registerManager.loadRegister(Register.IR, value);
-
-        boolean pcModified = switch (opcodeType) {
-            case LOAD_STORE -> executeLoadStoreInstruction(value);
-            case TRANSFER -> executeTransferInstruction(value);
-            case ARITHMETIC -> executeArithmeticInstruction(value);
-            case MULTIPLY_DIVIDE -> executeMultiplyDivideInstruction(value);
-            case LOGICAL -> executeLogicalInstruction(value);
-            case SHIFT_ROTATE -> executeShiftRotateInstruction(value);
-            case IO -> executeIOInstruction(value);
-            case MISC -> executeMiscInstruction(value);
-        };
-
-        if (!halted && !pcModified) {
-            programCounter += 1;
-        }
-
-        registerManager.loadRegister(Register.PC, programCounter);
-
-        // Log full register state after each instruction.
-        trace.logRegisterState(registerManager);
-        trace.incrementStep();
     }
 
     // ── Helper methods ──────────────────────────────────────────────────────────
@@ -321,7 +342,16 @@ public class CPU {
     }
 
     /**
-     * Raises a machine fault: sets the MFR register, logs the fault, displays an error, and halts.
+     * Raises a machine fault: sets the MFR register, saves PC to memory location 4,
+     * and redirects execution to the fault handler whose address is stored at memory location 1.
+     *
+     * <p>If no fault handler is installed (location 1 contains 0), the CPU simply halts
+     * (preserving Part II behaviour for programs that don't set up fault handling).
+     *
+     * <p>When a handler is installed, the current instruction is aborted ({@code halted = true})
+     * and the handler address is saved in {@link #pendingFaultHandler}. The try-finally block
+     * in {@link #executeNextInstruction()} then redirects PC and clears the halt so execution
+     * continues at the fault handler.
      *
      * @param mfrCode     the 4-bit MFR code (e.g. 0b0001, 0b0100, 0b1000)
      * @param description a human-readable description of the fault
@@ -331,7 +361,23 @@ public class CPU {
         registerManager.loadRegister(Register.MFR, mfrCode & 0xF);
         trace.logFault(mfrCode, description);
         outputManager.writeError("FAULT (MFR=" + String.format("%4s", Integer.toBinaryString(mfrCode & 0xF)).replace(' ', '0') + "): " + description);
-        halted = true;
+
+        // Save current PC to reserved memory location 4.
+        writeMemoryPrivileged(4, programCounter);
+
+        // Check for a fault handler at reserved memory location 1.
+        int faultHandlerAddr = memory.getMemoryAt(1);
+
+        halted = true; // Abort the current instruction.
+
+        if (faultHandlerAddr != 0) {
+            // A fault handler is installed — schedule redirect after the current instruction aborts.
+            pendingFaultHandler = faultHandlerAddr;
+            trace.logExecute("FAULT: handler installed at address " + faultHandlerAddr
+                    + ", PC saved to location 4 (" + programCounter + ")");
+        } else {
+            trace.logExecute("FAULT: no handler installed (location 1 = 0), halting");
+        }
     }
 
     /**
