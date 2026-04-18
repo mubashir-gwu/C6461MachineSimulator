@@ -393,59 +393,6 @@ All memory initializes to zero on simulator startup (IPL).
 
 Test programs are provided in `input/`:
 
-### `test_program.asm`
-
-Demonstrates direct addressing, indexed addressing, indirect addressing, and label-based control flow (JZ). Loads data into GPRs and index registers, then conditionally jumps to a HLT.
-
-Expected state after IPL + Run:
-- IX2 = 3 (decimal), R3 = 12, R2 = 12, R1 = 18, R0 = 0, IX1 = 1024
-- PC halts at address 512 (decimal) / 001000 (octal)
-
-### `test_part1.asm`
-
-The Part I deliverable test program. Covers all Load/Store instructions (LDR, STR, LDA, LDX, STX) and all four addressing modes. Data is pre-placed in memory via `DATA` directives before the code section at `LOC 50`.
-
-| Step | Instruction | Mode | Expected Result |
-|---|---|---|---|
-| 1 | `LDR 0,0,5` | Direct | R0 = mem[5] = 42 |
-| 2 | `LDA 1,0,5` | Load Address | R1 = EA = 5 |
-| 3 | `LDX 1,6` | Direct | IX1 = mem[6] = 10 |
-| 4 | `LDX 2,7` | Direct | IX2 = mem[7] = 3 |
-| 5 | `LDR 2,1,5` | Indexed | EA = IX1+5 = 15, R2 = mem[15] = 88 |
-| 6 | `LDR 3,0,8,1` | Indirect | EA = mem[8] = 25, R3 = mem[25] = 99 |
-| 7 | `LDR 0,2,8,1` | Indexed+Indirect | EA1 = IX2+8 = 11, EA = mem[11] = 27, R0 = mem[27] = 66 |
-| 8 | `STR 0,0,20` | Direct Store | mem[20] = R0 = 66 |
-| 9 | `STX 1,21` | Direct Store | mem[21] = IX1 = 10 |
-
-Expected register state after IPL + Run: R0 = 66, R1 = 5, R2 = 88, R3 = 99, IX1 = 10, IX2 = 3.
-
-### `test_faults.asm`
-
-Tests machine fault handling. Executes three normal instructions (two LDRs and an AIR), then attempts to load from reserved address 3, which triggers an MFR fault and halts the CPU before the final HLT is reached.
-
-Expected state after IPL + Run:
-- R0 = 47 (42 + 5 from AIR), R1 = 100, R2 = 0 (fault fired before load completed)
-- MFR = 0001 (reserved address fault)
-- PC = 11 (address of the faulting LDR instruction)
-
-### `test_fault_handler.asm` (Part III)
-
-Tests fault handler redirection. Sets up memory location 1 = 20 (fault handler address) with a HLT at address 20. Triggers a fault by writing to reserved address 3.
-
-Expected state after IPL + Run:
-- R0 = 47, R1 = 100
-- MFR = 0001 (reserved address fault)
-- Memory[4] = 11 (saved PC at time of fault)
-- PC = 20 (fault handler address where HLT executed)
-
-### `test_trap.asm` (Part III)
-
-Tests the TRAP instruction with a trap table at address 100. TRAP 0 dispatches to a handler at address 30 that loads R1 = 99. TRAP 1 dispatches to a handler at address 40 that loads R2 = 77. Both handlers return via `JMA 0,0,2,1` (indirect through location 2).
-
-Expected state after IPL + Run:
-- R0 = 42, R1 = 99, R2 = 77
-- PC = 13 (address of HLT after both TRAPs return)
-
 ### `program1.asm`
 
 Program 1 deliverable. Reads 20 integers from the keyboard, prints them, reads a target number, searches for the closest match, and prints the result. Uses subroutines (ReadNum, PrintNum) with JSR/RFS calling convention.

@@ -64,11 +64,6 @@ The simulator window will open immediately upon launch. No command-line argument
 
 Ready-to-run sample programs are provided in the `input/` directory:
 
-- `input/test_program.asm`: Demonstrates load/store, indexed, and indirect addressing with label-based control flow
-- `input/test_part1.asm`: Part I deliverable test covering all Load/Store instructions and all four addressing modes
-- `input/test_faults.asm`: Tests machine fault handling (reserved address access triggers MFR and halts)
-- `input/test_fault_handler.asm`: Tests fault handler redirection (Part III: fault saves PC, jumps to handler)
-- `input/test_trap.asm`: Tests TRAP instruction dispatch and return via trap table (Part III)
 - `input/program1.asm`: Program 1: reads 20 integers, prints them, finds closest to target
 - `input/program2.asm`: Program 2: reads paragraph from file, searches for a word (Part III, requires `paragraph.txt` via Card Reader)
 
@@ -276,11 +271,6 @@ C6461MachineSimulator/
 │   └── ui/
 │       └── UserInterface.java           # Swing GUI, console layout and all button wiring
 ├── input/
-│   ├── test_program.asm                 # Sample program (addressing modes + control flow demo)
-│   ├── test_part1.asm                   # Part I deliverable: all Load/Store instructions and addressing modes
-│   ├── test_faults.asm                  # Machine fault handling test (reserved address triggers MFR)
-│   ├── test_fault_handler.asm           # Fault handler redirection test (Part III)
-│   ├── test_trap.asm                    # TRAP instruction dispatch and return test (Part III)
 │   ├── program1.asm                     # Program 1: 20-number search
 │   ├── program2.asm                     # Program 2: paragraph word search (Part III)
 │   └── paragraph.txt                    # Sample paragraph file for Program 2 (6 sentences)
